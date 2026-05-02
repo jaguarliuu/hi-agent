@@ -1,0 +1,663 @@
+:root {
+  --ha-bg: #ffffff;
+  --ha-bg-subtle: #fafafa;
+  --ha-border: rgba(0, 0, 0, 0.08);
+  --ha-border-strong: rgba(0, 0, 0, 0.16);
+  --ha-fg: #0a0a0a;
+  --ha-fg-muted: #666;
+  --ha-accent: #e85d2f;
+  --ha-accent-soft: rgba(232, 93, 47, 0.08);
+  --ha-accent-glow: rgba(232, 93, 47, 0.22);
+  --ha-grid: rgba(0, 0, 0, 0.05);
+}
+
+html.dark {
+  --ha-bg: #0a0a0a;
+  --ha-bg-subtle: #111;
+  --ha-border: rgba(255, 255, 255, 0.1);
+  --ha-border-strong: rgba(255, 255, 255, 0.2);
+  --ha-fg: #fafafa;
+  --ha-fg-muted: #999;
+  --ha-accent: #ff7a4c;
+  --ha-accent-soft: rgba(255, 122, 76, 0.12);
+  --ha-accent-glow: rgba(255, 122, 76, 0.28);
+  --ha-grid: rgba(255, 255, 255, 0.05);
+}
+
+html {
+  font-feature-settings: 'ss01', 'cv11', 'ss03';
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'SF Pro Text',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  letter-spacing: -0.005em;
+}
+
+/* ============================================================
+ *  Navbar customizations — logo / search / theme switch in TR
+ * ============================================================ */
+
+.ha-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.ha-logo-mark {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--ha-fg) 0%, #555 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 0 12px -2px var(--ha-accent-glow);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.ha-logo-mark::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  transition: transform 0.8s ease;
+}
+
+.ha-logo:hover .ha-logo-mark {
+  transform: rotate(-6deg) scale(1.06);
+  box-shadow: 0 0 0 1px var(--ha-accent-glow),
+    0 6px 18px -4px var(--ha-accent-glow);
+}
+
+.ha-logo:hover .ha-logo-mark::after {
+  transform: translateX(120%);
+}
+
+.ha-logo-text {
+  letter-spacing: -0.01em;
+}
+
+.ha-logo-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--ha-bg-subtle);
+  color: var(--ha-fg-muted);
+  font-weight: 500;
+  border: 1px solid var(--ha-border);
+}
+
+/* Compact search input + breathing room from the GitHub project link.
+ * Nextra's Search component renders the input with `md:w-64` (256px), and
+ * the Search is wrapped in an untyped <div class="x:max-md:hidden">.  We
+ * must override both the wrapper and the input so the Search box keeps a
+ * bounded width AND doesn't run right up against the GitHub icon. */
+.nextra-search.ha-search {
+  width: 180px;
+  max-width: 180px;
+  min-width: 140px;
+  transition: width 0.3s ease;
+}
+.nextra-search.ha-search input[type='search'] {
+  width: 100%;
+  min-width: 0;
+}
+.nextra-search.ha-search:focus-within {
+  width: 240px;
+  max-width: 240px;
+}
+
+/* Tailwind's md:w-64 on the input ships as `@media (min-width:768px) { width:16rem }`,
+ * which outranks our wrapper's intrinsic width unless we constrain the input. */
+@media (min-width: 768px) {
+  .nextra-search.ha-search input[type='search'] {
+    width: 100% !important;
+    max-width: 100%;
+  }
+}
+
+/* Keep the Search block visually separated from the adjacent GitHub link,
+ * but not too far. Combined with navbar's own gap-4 (16px), a small 4px
+ * margin produces ~20px total breathing room — close but never touching. */
+.nextra-navbar nav > div:has(> .nextra-search.ha-search) {
+  margin-right: 4px;
+}
+
+/* The theme-switch button is moved into the navbar by ThemeSwitchRelocator.
+ * Nextra's original button ships with Tailwind `x:grow` (flex-grow: 1),
+ * which would stretch the button across the row once placed in navbar's
+ * flex line. We neutralize grow/shrink so it sizes to its content and
+ * sits snugly next to the GitHub icon. */
+.ha-theme-slot {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.ha-theme-slot > button[title="Change theme"] {
+  flex: 0 0 auto !important;
+  height: 28px;
+  padding: 0 8px;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ha-fg-muted);
+  font-size: 12px;
+  line-height: 1;
+  transition: color 0.2s ease, background 0.2s ease,
+    border-color 0.2s ease;
+}
+.ha-theme-slot > button[title="Change theme"] svg {
+  height: 14px;
+  width: 14px;
+  transition: transform 0.3s ease;
+}
+.ha-theme-slot > button[title="Change theme"]:hover {
+  color: var(--ha-accent);
+  background: var(--ha-accent-soft);
+  border-color: var(--ha-accent-soft);
+}
+.ha-theme-slot > button[title="Change theme"]:hover svg {
+  transform: rotate(20deg);
+}
+.ha-theme-slot > button[title="Change theme"][aria-expanded="true"] {
+  color: var(--ha-accent);
+  background: var(--ha-accent-soft);
+  border-color: var(--ha-accent-soft);
+}
+
+/* The sidebar footer that used to host the theme-switch button is now empty;
+ * collapse it so the sidebar does not reserve space for a ghost row. */
+.nextra-sidebar-footer:empty,
+.nextra-sidebar-footer:has(> .ha-theme-slot:only-child):empty {
+  display: none;
+}
+.nextra-sidebar-footer > :last-child:first-child:empty {
+  display: none;
+}
+
+/* ============================================================
+ *  Landing Hero
+ * ============================================================ */
+
+.ha-hero {
+  position: relative;
+  padding: 112px 24px 88px;
+  text-align: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--ha-border);
+  isolation: isolate;
+}
+
+/* Moving grid background */
+.ha-hero-bg {
+  position: absolute;
+  inset: -40px;
+  pointer-events: none;
+  z-index: -2;
+  background-image:
+    linear-gradient(var(--ha-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ha-grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at center, #000 0%, transparent 72%);
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, transparent 72%);
+  animation: ha-grid-drift 40s linear infinite;
+}
+
+@keyframes ha-grid-drift {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: 56px 56px, 56px 56px; }
+}
+
+/* Orange glow blob behind the title */
+.ha-hero::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  width: 640px;
+  height: 320px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    ellipse at center,
+    var(--ha-accent-glow) 0%,
+    transparent 65%
+  );
+  z-index: -1;
+  animation: ha-blob-pulse 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes ha-blob-pulse {
+  0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: 1;   transform: translate(-50%, -50%) scale(1.15); }
+}
+
+.ha-hero-inner {
+  position: relative;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.ha-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ha-accent);
+  background: var(--ha-accent-soft);
+  border: 1px solid var(--ha-accent-soft);
+  margin-bottom: 24px;
+}
+
+.ha-eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ha-accent);
+  box-shadow: 0 0 0 3px var(--ha-accent-soft);
+  animation: ha-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes ha-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px var(--ha-accent-soft); }
+  50%      { box-shadow: 0 0 0 7px transparent; }
+}
+
+.ha-title {
+  font-size: clamp(36px, 6vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  margin: 0 0 20px;
+  color: var(--ha-fg);
+}
+
+.ha-title em {
+  font-style: normal;
+  background: linear-gradient(
+    135deg,
+    var(--ha-accent) 0%,
+    #b8451f 50%,
+    var(--ha-accent) 100%
+  );
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ha-gradient-shift 6s ease infinite;
+}
+
+@keyframes ha-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+.ha-subtitle {
+  font-size: clamp(15px, 1.5vw, 18px);
+  line-height: 1.65;
+  color: var(--ha-fg-muted);
+  max-width: 640px;
+  margin: 0 auto 36px;
+}
+
+.ha-cta-row {
+  display: inline-flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ============================================================
+ *  Buttons
+ * ============================================================ */
+
+.ha-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none !important;
+  transition: transform 0.2s ease, background 0.2s ease,
+    border-color 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.ha-btn-arrow {
+  display: inline-block;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ha-btn:hover .ha-btn-arrow {
+  transform: translateX(4px);
+}
+
+.ha-btn-primary {
+  background: var(--ha-fg);
+  color: var(--ha-bg);
+}
+.ha-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.28),
+    0 0 0 1px var(--ha-accent-glow);
+}
+
+/* Primary button shine */
+.ha-btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.22) 50%,
+    transparent 65%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+.ha-btn-primary:hover::before {
+  transform: translateX(100%);
+}
+
+.ha-btn-ghost {
+  color: var(--ha-fg);
+  border-color: var(--ha-border);
+  background: transparent;
+}
+.ha-btn-ghost:hover {
+  border-color: var(--ha-fg);
+  transform: translateY(-1px);
+}
+
+/* ============================================================
+ *  Section + Module Grid
+ * ============================================================ */
+
+.ha-section {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 72px 24px;
+}
+
+.ha-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.ha-section-title {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.ha-section-desc {
+  color: var(--ha-fg-muted);
+  font-size: 14px;
+  max-width: 420px;
+}
+
+.ha-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1px;
+  background: var(--ha-border);
+  border: 1px solid var(--ha-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.ha-card {
+  position: relative;
+  background: var(--ha-bg);
+  padding: 28px 24px 24px;
+  text-decoration: none !important;
+  color: inherit !important;
+  transition: background 0.25s ease, transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 180px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* subtle diagonal sheen on hover */
+.ha-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    420px circle at var(--mx, 50%) var(--my, 0%),
+    var(--ha-accent-soft) 0%,
+    transparent 55%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.ha-card:hover {
+  background: var(--ha-bg-subtle);
+  transform: translateY(-2px);
+}
+
+.ha-card:hover::before {
+  opacity: 1;
+}
+
+.ha-card::after {
+  content: '→';
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  font-size: 14px;
+  color: var(--ha-fg-muted);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.25s ease, transform 0.25s ease, color 0.25s ease;
+}
+
+.ha-card:hover::after {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--ha-accent);
+}
+
+.ha-card-index {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 11px;
+  color: var(--ha-fg-muted);
+  letter-spacing: 0.05em;
+}
+
+.ha-card-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+  transition: color 0.2s ease;
+}
+
+.ha-card:hover .ha-card-title {
+  color: var(--ha-accent);
+}
+
+.ha-card-desc {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ha-fg-muted);
+  margin: 0;
+}
+
+.ha-card-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ha-fg-muted);
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  margin-top: auto;
+}
+
+.ha-card-tag span {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ha-accent);
+  box-shadow: 0 0 0 0 var(--ha-accent-glow);
+  transition: box-shadow 0.3s ease;
+}
+
+.ha-card:hover .ha-card-tag span {
+  box-shadow: 0 0 0 4px var(--ha-accent-soft);
+}
+
+/* ============================================================
+ *  Meta row
+ * ============================================================ */
+
+.ha-meta-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 24px;
+  padding: 32px 0;
+  border-top: 1px solid var(--ha-border);
+  border-bottom: 1px solid var(--ha-border);
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.ha-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 24px;
+}
+
+.ha-meta-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ha-fg-muted);
+}
+
+.ha-meta-value {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ============================================================
+ *  CTA card (bottom of home)
+ * ============================================================ */
+
+.ha-cta-card {
+  position: relative;
+  border: 1px solid var(--ha-border);
+  border-radius: 14px;
+  padding: 48px 28px;
+  text-align: center;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse at top,
+    var(--ha-accent-soft) 0%,
+    transparent 60%
+  );
+}
+
+.ha-cta-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    transparent 40%,
+    var(--ha-accent-glow) 60%,
+    transparent 80%
+  );
+  background-size: 300% 300%;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: ha-border-shimmer 6s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes ha-border-shimmer {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+.ha-cta-title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+}
+
+.ha-cta-desc {
+  color: var(--ha-fg-muted);
+  margin: 0 0 20px;
+  font-size: 14px;
+}
+
+/* ============================================================
+ *  Reveal animation (stagger via --i)
+ * ============================================================ */
+
+.ha-reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: ha-rise 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 70ms + 120ms);
+}
+
+@keyframes ha-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .ha-reveal,
+  .ha-hero-bg,
+  .ha-hero::before,
+  .ha-eyebrow-dot,
+  .ha-title em,
+  .ha-cta-card::before {
+    animation: none !important;
+  }
+  .ha-reveal { opacity: 1; transform: none; }
+  .ha-btn,
+  .ha-card,
+  .ha-btn-arrow {
+    transition: none !important;
+  }
+}

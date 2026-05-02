@@ -1,0 +1,65 @@
+---
+title: Context Engineering
+description: Prompt 是 UI，Context 是整台机器。
+---
+
+import { Callout, Steps } from 'nextra/components'
+
+# M04 · Context Engineering
+
+> Prompt Engineering 处理的是"说什么"，**Context Engineering 处理的是"让模型看到什么"**。
+
+## 本章目标
+
+- 理解 Prompt Engineering 与 Context Engineering 的边界
+- 掌握上下文的来源、压缩、路由与注入
+- 建立"Context 是一种系统设计"的工程视角
+
+<Callout type="info">
+本节内容占位中。你将学到：上下文分层、动态注入、RAG 的工程化、上下文压缩、上下文污染与对齐。
+</Callout>
+
+## 章节结构
+
+<Steps>
+
+### Context 的来源
+
+系统指令、历史对话、工具结果、外部检索、用户画像——它们都是 Context。
+
+### 分层与优先级
+
+什么必须保留？什么可以丢？什么可以压缩？
+
+### 动态注入
+
+不是"塞满"，而是"按需"。路由、召回、裁剪。
+
+### 上下文污染
+
+一条错误信息，能毁掉整个 Agent。如何识别与隔离。
+
+### 评测
+
+如何衡量一段 Context 是"好"的？
+
+</Steps>
+
+## 一个上下文注入示例
+
+```ts
+// 占位：后续补充一个上下文装配示例
+function buildContext(task: Task): Message[] {
+  return [
+    systemPrompt(task.role),
+    ...retrieveRelevantMemory(task.userId, task.query),
+    ...retrieveRelevantDocs(task.query, { topK: 3 }),
+    ...task.history.slice(-6),
+    { role: 'user', content: task.query }
+  ]
+}
+```
+
+---
+
+**上一章** ← [M03 · Tool](/docs/tool) · **下一章** → [M05 · Memory](/docs/memory)

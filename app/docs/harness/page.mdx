@@ -1,0 +1,67 @@
+---
+title: Harness
+description: 让 Agent 从 Demo 走向生产。
+---
+
+import { Callout, Steps } from 'nextra/components'
+
+# M07 · Harness
+
+> Model 只是引擎，**Harness 才是整辆车**。
+
+## 本章目标
+
+- 理解什么是 Agent Harness，以及它为什么重要
+- 掌握运行时、沙箱、评测、观测四大支柱
+- 建立把一个 Agent Demo 推向生产的完整工程思路
+
+<Callout type="info">
+本节内容占位中。你将学到：执行环境、沙箱隔离、可观测性（tracing/metrics/logging）、评测体系、灰度与回滚。
+</Callout>
+
+## 章节结构
+
+<Steps>
+
+### 什么是 Harness
+
+从 "model + prompt" 到 "model + prompt + harness"——为什么这个词越来越重要。
+
+### 运行时
+
+事件驱动、状态机、流式调度——Agent 的底层执行引擎长什么样。
+
+### 沙箱
+
+文件、网络、进程——危险的工具需要可控的执行空间。
+
+### 可观测性
+
+Tracing、Metrics、Structured Logging。让每一次 Agent 运行都可复盘。
+
+### 评测环
+
+离线评测、在线 A/B、对抗评测——如何衡量"Agent 变好了"。
+
+### 灰度与回滚
+
+Agent 的每一次 prompt / tool 改动，都是一次生产发布。
+
+</Steps>
+
+## 一个最小 Harness 接口
+
+```ts
+// 占位：后续补充一个最小 Harness 骨架
+interface AgentHarness {
+  run(task: AgentTask): AsyncIterable<AgentEvent>
+  trace(runId: string): Promise<Trace>
+  evaluate(runId: string, rubric: Rubric): Promise<Score>
+}
+```
+
+---
+
+**上一章** ← [M06 · Multi-Agent](/docs/multi-agent)
+
+🎉 **恭喜你走完了整个课程大纲。** 接下来就是逐章深入了。

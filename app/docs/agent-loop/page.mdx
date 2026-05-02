@@ -1,0 +1,65 @@
+---
+title: Agent Loop
+description: 拆解 Observe → Think → Act 的核心循环。
+---
+
+import { Callout, Steps } from 'nextra/components'
+
+# M02 · Agent Loop
+
+> 如果说 Chat 是 Agent 的"嘴巴"，那 **Agent Loop 就是它的心跳**。
+
+## 本章目标
+
+- 理解什么是 Agent Loop，以及为什么它是 Agent 的核心
+- 掌握 Observe → Think → Act 的经典三段式
+- 认识终止条件、步数上限、错误恢复等工程细节
+
+<Callout type="info">
+本节内容占位中。你将学到：ReAct 模式、循环终止条件、步数与预算控制、异常与回退策略。
+</Callout>
+
+## 章节结构
+
+<Steps>
+
+### 什么是 Agent Loop
+
+从"一问一答"到"自主行动"——一个循环的诞生。
+
+### Observe / Think / Act
+
+三段式的来历，以及它的各种变体。
+
+### 终止条件
+
+何时停下？预算、步数、信号、失败次数。
+
+### 错误恢复
+
+模型幻觉、工具失败、状态漂移——如何让循环"稳得住"。
+
+</Steps>
+
+## 一个最小 Loop
+
+```ts
+// 占位：后续补充一个最小 Agent Loop 实现
+async function runAgent(task: string, maxSteps = 10) {
+  const history: Message[] = [{ role: 'user', content: task }]
+
+  for (let step = 0; step < maxSteps; step++) {
+    const res = await model.chat({ messages: history, tools })
+    if (res.finish_reason === 'stop') return res.content
+    if (res.tool_calls) {
+      const result = await executeTool(res.tool_calls)
+      history.push({ role: 'tool', content: result })
+    }
+  }
+  throw new Error('Max steps reached')
+}
+```
+
+---
+
+**上一章** ← [M01 · Chat](/docs/chat) · **下一章** → [M03 · Tool](/docs/tool)

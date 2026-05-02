@@ -1,0 +1,71 @@
+---
+title: Tool
+description: 工具调用的设计哲学与工程实践。
+---
+
+import { Callout, Steps } from 'nextra/components'
+
+# M03 · Tool
+
+> 没有工具的 Agent，就像没有手的大脑——**能想，却做不到**。
+
+## 本章目标
+
+- 理解 Tool Calling 的协议层与语义层
+- 掌握 Tool Schema 的设计原则
+- 认识副作用、幂等性与错误边界
+
+<Callout type="info">
+本节内容占位中。你将学到：JSON Schema 设计、参数裁剪、并行调用、错误恢复、权限与沙箱。
+</Callout>
+
+## 章节结构
+
+<Steps>
+
+### Tool 的本质
+
+一次函数调用？一次意图表达？还是一次契约协商？
+
+### Schema 设计
+
+一个"好"的 Tool Schema 长什么样？最小信息、最强提示。
+
+### 并行与串行
+
+模型可以同时调用多个工具，但并不总是应该。
+
+### 错误边界
+
+工具会失败——我们怎么让 Agent 知道、理解、并恢复。
+
+### 权限与沙箱
+
+Tool 即能力，能力即风险。生产环境的权限边界。
+
+</Steps>
+
+## 一个 Tool 定义示例
+
+```ts
+// 占位：后续补充一个设计良好的 Tool 示例
+const searchDocsTool = {
+  type: 'function',
+  function: {
+    name: 'search_docs',
+    description: '在课程文档中检索内容，返回相关片段及来源。',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: '检索关键词' },
+        topK: { type: 'integer', minimum: 1, maximum: 10, default: 3 }
+      },
+      required: ['query']
+    }
+  }
+}
+```
+
+---
+
+**上一章** ← [M02 · Agent Loop](/docs/agent-loop) · **下一章** → [M04 · Context Engineering](/docs/context-engineering)

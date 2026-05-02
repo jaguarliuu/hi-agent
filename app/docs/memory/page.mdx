@@ -1,0 +1,63 @@
+---
+title: Memory
+description: 构建可以真正"记住你"的 Agent。
+---
+
+import { Callout, Steps } from 'nextra/components'
+
+# M05 · Memory
+
+> 一个没有记忆的 Agent，每次对话都是"第一次见面"。
+
+## 本章目标
+
+- 认识记忆的三种形态：Working / Episodic / Semantic
+- 掌握记忆的写入、召回、遗忘机制
+- 理解记忆与 Context 之间的协作关系
+
+<Callout type="info">
+本节内容占位中。你将学到：记忆三层模型、向量存储、摘要机制、遗忘策略、隐私与一致性。
+</Callout>
+
+## 章节结构
+
+<Steps>
+
+### 记忆的三层
+
+- **Working Memory**：当前对话、短期状态
+- **Episodic Memory**：过往事件、交互历史
+- **Semantic Memory**：提炼后的知识、用户偏好
+
+### 写入策略
+
+什么值得被记住？何时写？写在哪？
+
+### 召回策略
+
+精确召回、语义召回、混合召回——以及它们与 Context Engineering 的接口。
+
+### 遗忘与衰减
+
+记忆不是越多越好。遗忘是一种功能。
+
+### 隐私与一致性
+
+当记忆跨会话、跨用户、跨 Agent 时，边界在哪里。
+
+</Steps>
+
+## 一个记忆接口示例
+
+```ts
+// 占位：后续补充一个简单记忆层接口
+interface MemoryStore {
+  write(userId: string, event: MemoryEvent): Promise<void>
+  recall(userId: string, query: string, opts?: RecallOpts): Promise<Memory[]>
+  forget(userId: string, filter: MemoryFilter): Promise<void>
+}
+```
+
+---
+
+**上一章** ← [M04 · Context Engineering](/docs/context-engineering) · **下一章** → [M06 · Multi-Agent](/docs/multi-agent)

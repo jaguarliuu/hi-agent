@@ -1,0 +1,67 @@
+---
+title: Multi-Agent
+description: 从单体到群体，多 Agent 系统的工程化落地。
+---
+
+import { Callout, Steps } from 'nextra/components'
+
+# M06 · Multi-Agent
+
+> 一个 Agent 擅长一件事。**多个 Agent 才能完成复杂工作**。
+
+## 本章目标
+
+- 理解多 Agent 的适用场景（以及不适用场景）
+- 掌握主流编排模式：supervisor、pipeline、swarm、debate
+- 认识通信协议与共识机制
+
+<Callout type="warning">
+多 Agent 不是银弹。在引入它之前，请先确认单 Agent 真的做不到。
+</Callout>
+
+## 章节结构
+
+<Steps>
+
+### 何时需要多 Agent
+
+分工带来的收益 vs 协调带来的成本。
+
+### 编排模式
+
+- **Supervisor**：一个主脑 + 多个专家
+- **Pipeline**：流水线式传递
+- **Swarm**：对等协作
+- **Debate**：辩论与投票
+
+### 通信协议
+
+消息总线、共享黑板、直接调用——三种典型设计。
+
+### 共识与冲突
+
+当两个 Agent 意见不一致时该听谁的。
+
+### 观测与调试
+
+多 Agent 系统的"分布式"本质，和它带来的 Debug 痛苦。
+
+</Steps>
+
+## 一个 Supervisor 示意
+
+```ts
+// 占位：后续补充一个 Supervisor 模式示例
+const supervisor = createAgent({
+  role: 'router',
+  tools: [callResearcher, callWriter, callReviewer]
+})
+
+await supervisor.run({
+  goal: '撰写一份关于 Agent 架构的技术调研'
+})
+```
+
+---
+
+**上一章** ← [M05 · Memory](/docs/memory) · **下一章** → [M07 · Harness](/docs/harness)
