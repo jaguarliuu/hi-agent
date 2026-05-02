@@ -3,7 +3,8 @@ title: Harness
 description: 让 Agent 从 Demo 走向生产。
 ---
 
-import { Callout, Steps } from 'nextra/components'
+import { Callout, Cards } from 'nextra/components'
+import { DocLink } from '../../lib/doc-link'
 
 # M07 · Harness
 
@@ -11,57 +12,22 @@ import { Callout, Steps } from 'nextra/components'
 
 ## 本章目标
 
-- 理解什么是 Agent Harness，以及它为什么重要
-- 掌握运行时、沙箱、评测、观测四大支柱
-- 建立把一个 Agent Demo 推向生产的完整工程思路
+- 理解 Harness 作为 Agent 运行时的完整职责
+- 掌握沙箱、可观测性、评测、灰度、回滚等核心能力
+- 认识从 Demo 到生产所需要的工程闭环
 
 <Callout type="info">
-本节内容占位中。你将学到：执行环境、沙箱隔离、可观测性（tracing/metrics/logging）、评测体系、灰度与回滚。
+本章仍在持续完善。下方 Cards 指向本章各小节，你可以按顺序阅读，也可以挑感兴趣的章节切入。
 </Callout>
 
-## 章节结构
+## 本章目录
 
-<Steps>
-
-### 什么是 Harness
-
-从 "model + prompt" 到 "model + prompt + harness"——为什么这个词越来越重要。
-
-### 运行时
-
-事件驱动、状态机、流式调度——Agent 的底层执行引擎长什么样。
-
-### 沙箱
-
-文件、网络、进程——危险的工具需要可控的执行空间。
-
-### 可观测性
-
-Tracing、Metrics、Structured Logging。让每一次 Agent 运行都可复盘。
-
-### 评测环
-
-离线评测、在线 A/B、对抗评测——如何衡量"Agent 变好了"。
-
-### 灰度与回滚
-
-Agent 的每一次 prompt / tool 改动，都是一次生产发布。
-
-</Steps>
-
-## 一个最小 Harness 接口
-
-```ts
-// 占位：后续补充一个最小 Harness 骨架
-interface AgentHarness {
-  run(task: AgentTask): AsyncIterable<AgentEvent>
-  trace(runId: string): Promise<Trace>
-  evaluate(runId: string, rubric: Rubric): Promise<Score>
-}
-```
+<Cards>
+  <Cards.Card title="7.1 入门" href="/docs/harness/01-getting-started" />
+  <Cards.Card title="7.2 核心概念" href="/docs/harness/02-core-concepts" />
+  <Cards.Card title="7.3 工程实践" href="/docs/harness/03-practice" />
+</Cards>
 
 ---
 
-**上一章** ← [M06 · Multi-Agent](/docs/multi-agent)
-
-🎉 **恭喜你走完了整个课程大纲。** 接下来就是逐章深入了。
+**上一章** ← <DocLink href="/docs/multi-agent">M06 · Multi-Agent</DocLink> · 🎉 **恭喜你，已经走到了 Hi-Agent 课程的终点。**

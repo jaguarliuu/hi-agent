@@ -3,7 +3,8 @@ title: Chat
 description: 从对话接口出发，理解 Agent 的最小表达单元。
 ---
 
-import { Callout, Steps } from 'nextra/components'
+import { Callout, Cards } from 'nextra/components'
+import { DocLink } from '../../lib/doc-link'
 
 # M01 · Chat
 
@@ -16,53 +17,17 @@ import { Callout, Steps } from 'nextra/components'
 - 掌握一个最小可运行的对话循环
 
 <Callout type="info">
-本节内容占位中。你将学到：消息结构、角色体系、流式输出、Token 与上下文窗口、多轮对话的工程化。
+本章仍在持续完善。下方 Cards 指向本章各小节，你可以按顺序阅读，也可以挑感兴趣的章节切入。
 </Callout>
 
-## 章节结构
+## 本章目录
 
-<Steps>
-
-### 消息与角色
-
-`system` / `user` / `assistant` / `tool`——四种角色的设计哲学与使用边界。
-
-### 流式输出
-
-为什么所有现代 Agent 都必须支持 streaming？背压、取消、增量渲染。
-
-### 上下文窗口
-
-Token 是一种稀缺资源。本节讨论窗口管理的基础策略。
-
-### 多轮对话
-
-一个最小的对话循环是如何工作的，以及它离"Agent"还差什么。
-
-</Steps>
-
-## 一个最小示例
-
-```ts
-// 占位：后续补充一个最小可跑的 Chat 示例
-import OpenAI from 'openai'
-
-const client = new OpenAI()
-
-const stream = await client.chat.completions.create({
-  model: 'gpt-4o-mini',
-  stream: true,
-  messages: [
-    { role: 'system', content: 'You are a helpful assistant.' },
-    { role: 'user', content: 'Hello!' }
-  ]
-})
-
-for await (const chunk of stream) {
-  process.stdout.write(chunk.choices[0]?.delta?.content ?? '')
-}
-```
+<Cards>
+  <Cards.Card title="1.1 入门" href="/docs/chat/01-getting-started" />
+  <Cards.Card title="1.2 核心概念" href="/docs/chat/02-core-concepts" />
+  <Cards.Card title="1.3 工程实践" href="/docs/chat/03-practice" />
+</Cards>
 
 ---
 
-**下一章** → [M02 · Agent Loop](/docs/agent-loop)
+**下一章** → <DocLink href="/docs/agent-loop">M02 · Agent Loop</DocLink>

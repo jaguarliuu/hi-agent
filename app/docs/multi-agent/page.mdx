@@ -3,7 +3,8 @@ title: Multi-Agent
 description: 从单体到群体，多 Agent 系统的工程化落地。
 ---
 
-import { Callout, Steps } from 'nextra/components'
+import { Callout, Cards } from 'nextra/components'
+import { DocLink } from '../../lib/doc-link'
 
 # M06 · Multi-Agent
 
@@ -11,57 +12,22 @@ import { Callout, Steps } from 'nextra/components'
 
 ## 本章目标
 
-- 理解多 Agent 的适用场景（以及不适用场景）
-- 掌握主流编排模式：supervisor、pipeline、swarm、debate
-- 认识通信协议与共识机制
+- 理解多 Agent 系统的协作模式与通信协议
+- 掌握规划者 / 执行者 / 评审者等常见角色划分
+- 认识 A2A、消息总线、共享黑板等工程范式
 
-<Callout type="warning">
-多 Agent 不是银弹。在引入它之前，请先确认单 Agent 真的做不到。
+<Callout type="info">
+本章仍在持续完善。下方 Cards 指向本章各小节，你可以按顺序阅读，也可以挑感兴趣的章节切入。
 </Callout>
 
-## 章节结构
+## 本章目录
 
-<Steps>
-
-### 何时需要多 Agent
-
-分工带来的收益 vs 协调带来的成本。
-
-### 编排模式
-
-- **Supervisor**：一个主脑 + 多个专家
-- **Pipeline**：流水线式传递
-- **Swarm**：对等协作
-- **Debate**：辩论与投票
-
-### 通信协议
-
-消息总线、共享黑板、直接调用——三种典型设计。
-
-### 共识与冲突
-
-当两个 Agent 意见不一致时该听谁的。
-
-### 观测与调试
-
-多 Agent 系统的"分布式"本质，和它带来的 Debug 痛苦。
-
-</Steps>
-
-## 一个 Supervisor 示意
-
-```ts
-// 占位：后续补充一个 Supervisor 模式示例
-const supervisor = createAgent({
-  role: 'router',
-  tools: [callResearcher, callWriter, callReviewer]
-})
-
-await supervisor.run({
-  goal: '撰写一份关于 Agent 架构的技术调研'
-})
-```
+<Cards>
+  <Cards.Card title="6.1 入门" href="/docs/multi-agent/01-getting-started" />
+  <Cards.Card title="6.2 核心概念" href="/docs/multi-agent/02-core-concepts" />
+  <Cards.Card title="6.3 工程实践" href="/docs/multi-agent/03-practice" />
+</Cards>
 
 ---
 
-**上一章** ← [M05 · Memory](/docs/memory) · **下一章** → [M07 · Harness](/docs/harness)
+**上一章** ← <DocLink href="/docs/memory">M05 · Memory</DocLink> · **下一章** → <DocLink href="/docs/harness">M07 · Harness</DocLink>

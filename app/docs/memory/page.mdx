@@ -3,7 +3,8 @@ title: Memory
 description: 构建可以真正"记住你"的 Agent。
 ---
 
-import { Callout, Steps } from 'nextra/components'
+import { Callout, Cards } from 'nextra/components'
+import { DocLink } from '../../lib/doc-link'
 
 # M05 · Memory
 
@@ -11,53 +12,22 @@ import { Callout, Steps } from 'nextra/components'
 
 ## 本章目标
 
-- 认识记忆的三种形态：Working / Episodic / Semantic
-- 掌握记忆的写入、召回、遗忘机制
-- 理解记忆与 Context 之间的协作关系
+- 区分短期记忆、长期记忆、情节记忆
+- 掌握存储 / 检索 / 更新 / 遗忘 四个关键动作
+- 认识向量存储、知识图谱、结构化 Memory 的选型
 
 <Callout type="info">
-本节内容占位中。你将学到：记忆三层模型、向量存储、摘要机制、遗忘策略、隐私与一致性。
+本章仍在持续完善。下方 Cards 指向本章各小节，你可以按顺序阅读，也可以挑感兴趣的章节切入。
 </Callout>
 
-## 章节结构
+## 本章目录
 
-<Steps>
-
-### 记忆的三层
-
-- **Working Memory**：当前对话、短期状态
-- **Episodic Memory**：过往事件、交互历史
-- **Semantic Memory**：提炼后的知识、用户偏好
-
-### 写入策略
-
-什么值得被记住？何时写？写在哪？
-
-### 召回策略
-
-精确召回、语义召回、混合召回——以及它们与 Context Engineering 的接口。
-
-### 遗忘与衰减
-
-记忆不是越多越好。遗忘是一种功能。
-
-### 隐私与一致性
-
-当记忆跨会话、跨用户、跨 Agent 时，边界在哪里。
-
-</Steps>
-
-## 一个记忆接口示例
-
-```ts
-// 占位：后续补充一个简单记忆层接口
-interface MemoryStore {
-  write(userId: string, event: MemoryEvent): Promise<void>
-  recall(userId: string, query: string, opts?: RecallOpts): Promise<Memory[]>
-  forget(userId: string, filter: MemoryFilter): Promise<void>
-}
-```
+<Cards>
+  <Cards.Card title="5.1 入门" href="/docs/memory/01-getting-started" />
+  <Cards.Card title="5.2 核心概念" href="/docs/memory/02-core-concepts" />
+  <Cards.Card title="5.3 工程实践" href="/docs/memory/03-practice" />
+</Cards>
 
 ---
 
-**上一章** ← [M04 · Context Engineering](/docs/context-engineering) · **下一章** → [M06 · Multi-Agent](/docs/multi-agent)
+**上一章** ← <DocLink href="/docs/context-engineering">M04 · Context Engineering</DocLink> · **下一章** → <DocLink href="/docs/multi-agent">M06 · Multi-Agent</DocLink>
