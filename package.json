@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && pagefind --site out --output-subdir _pagefind",
     "start": "next start",
-    "export": "next build"
+    "export": "next build && pagefind --site out --output-subdir _pagefind"
   },
   "dependencies": {
     "next": "^15.1.6",
@@ -19,6 +19,7 @@
     "@types/node": "^22.10.7",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
+    "pagefind": "^1.5.2",
     "typescript": "^5.7.3"
   }
 }
