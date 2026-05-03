@@ -661,3 +661,293 @@ body {
     transition: none !important;
   }
 }
+
+/* ============================================================
+ * Collapsible Code Block
+ * Uses native <details>/<summary>, 0 JS, SSR-friendly.
+ * ============================================================ */
+.ha-codeblock {
+  margin: 1.25rem 0;
+  border: 1px solid var(--ha-border, rgba(0, 0, 0, 0.08));
+  border-radius: 10px;
+  background: var(--ha-surface, rgba(0, 0, 0, 0.02));
+  overflow: hidden;
+}
+
+html.dark .ha-codeblock {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ha-codeblock-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--ha-fg-muted, rgba(0, 0, 0, 0.7));
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.ha-codeblock-summary::-webkit-details-marker {
+  display: none;
+}
+
+.ha-codeblock-summary:hover {
+  background: var(--ha-accent-soft, rgba(232, 93, 47, 0.08));
+  color: var(--ha-accent, #e85d2f);
+}
+
+.ha-codeblock-chevron {
+  display: inline-block;
+  transition: transform 0.25s ease;
+  font-size: 12px;
+  color: currentColor;
+}
+
+.ha-codeblock[open] > .ha-codeblock-summary .ha-codeblock-chevron {
+  transform: rotate(90deg);
+}
+
+.ha-codeblock-title {
+  font-weight: 500;
+  flex: 0 0 auto;
+}
+
+.ha-codeblock-hint {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.ha-codeblock-body {
+  padding: 0 4px 4px;
+  animation: ha-codeblock-reveal 0.2s ease;
+}
+
+.ha-codeblock-body > :first-child {
+  margin-top: 0 !important;
+}
+
+.ha-codeblock-body > :last-child {
+  margin-bottom: 0 !important;
+}
+
+@keyframes ha-codeblock-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ha-codeblock-chevron,
+  .ha-codeblock-body {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ============================================================
+ * Source Link Card (GitHub commit / PR / file / repo)
+ * ============================================================ */
+.ha-source-link {
+  --ha-sl-accent: #e85d2f;
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  margin: 1.4rem 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(232, 93, 47, 0.02) 0%, rgba(232, 93, 47, 0) 100%),
+    rgba(255, 255, 255, 0.6);
+  color: inherit !important;
+  text-decoration: none !important;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+html.dark .ha-source-link {
+  border-color: rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(232, 93, 47, 0.05) 0%, rgba(232, 93, 47, 0) 100%),
+    rgba(255, 255, 255, 0.03);
+}
+
+.ha-source-link::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    400px circle at var(--x, 50%) var(--y, 50%),
+    rgba(232, 93, 47, 0.12),
+    transparent 40%
+  );
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.ha-source-link:hover {
+  transform: translateY(-1px);
+  border-color: var(--ha-sl-accent);
+  box-shadow: 0 8px 24px -12px rgba(232, 93, 47, 0.45);
+}
+
+.ha-source-link:hover::before {
+  opacity: 1;
+}
+
+.ha-source-link:active {
+  transform: translateY(0);
+}
+
+.ha-source-link-icon {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(232, 93, 47, 0.1);
+  color: var(--ha-sl-accent);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.ha-source-link:hover .ha-source-link-icon {
+  background: var(--ha-sl-accent);
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.ha-source-link-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ha-source-link-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 600;
+}
+
+html.dark .ha-source-link-top {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.ha-source-link-badge {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(232, 93, 47, 0.1);
+  color: var(--ha-sl-accent);
+  letter-spacing: 0.02em;
+  text-transform: none;
+  line-height: 1.3;
+}
+
+.ha-source-link-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: inherit;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.ha-source-link-desc {
+  font-size: 12.5px;
+  color: rgba(0, 0, 0, 0.6);
+  line-height: 1.5;
+}
+
+html.dark .ha-source-link-desc {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.ha-source-link-arrow {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.4);
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+
+html.dark .ha-source-link-arrow {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.ha-source-link:hover .ha-source-link-arrow {
+  color: var(--ha-sl-accent);
+  transform: translate(2px, -2px);
+}
+
+/* Type variants: tint the left icon for non-commit kinds */
+.ha-source-link[data-type='pr'] .ha-source-link-icon {
+  background: rgba(130, 80, 223, 0.12);
+  color: #8250df;
+}
+.ha-source-link[data-type='pr']:hover .ha-source-link-icon {
+  background: #8250df;
+  color: #fff;
+}
+.ha-source-link[data-type='file'] .ha-source-link-icon {
+  background: rgba(9, 105, 218, 0.12);
+  color: #0969da;
+}
+.ha-source-link[data-type='file']:hover .ha-source-link-icon {
+  background: #0969da;
+  color: #fff;
+}
+.ha-source-link[data-type='repo'] .ha-source-link-icon {
+  background: rgba(31, 35, 40, 0.1);
+  color: #1f2328;
+}
+html.dark .ha-source-link[data-type='repo'] .ha-source-link-icon {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e6edf3;
+}
+.ha-source-link[data-type='repo']:hover .ha-source-link-icon {
+  background: #1f2328;
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ha-source-link,
+  .ha-source-link-icon,
+  .ha-source-link-arrow {
+    transition: none !important;
+    transform: none !important;
+  }
+  .ha-source-link::before {
+    display: none;
+  }
+}
