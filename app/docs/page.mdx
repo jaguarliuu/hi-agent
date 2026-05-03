@@ -5,6 +5,7 @@ title: 课程简介
 import { Callout, Cards } from 'nextra/components'
 import Image from 'next/image'
 import { withBase } from '../lib/base-path'
+import { ZoomableImage } from '../lib/zoomable-image'
 
 ## 课程简介
 
@@ -57,7 +58,7 @@ import { withBase } from '../lib/base-path'
 
 表面上看，这只是一句很普通的提问。但在 OpenClaw 背后，一个完整的 Agent 流程已经启动了。
 
-<Image
+<ZoomableImage
     src={withBase('/images/common/agent-timeline.png')}
     alt="Agent Loop 流程图"
     width={960}
@@ -106,7 +107,7 @@ import { withBase } from '../lib/base-path'
 
 这句话背后，其实串起了 Agent 系统里的七个核心模块：
 
-<Image
+<ZoomableImage
     src={withBase('/images/common/agent-common.png')}
     alt="Agent Loop 流程图"
     width={960}
@@ -148,7 +149,7 @@ import { withBase } from '../lib/base-path'
 4. **更新上下文**: 上下文会被更新，包含用户输入、模型回复、工具调用结果等。
 5. **重复以上步骤**: 重复以上步骤，直到任务完成。
 
-<Image
+<ZoomableImage
     src={withBase('/images/common/agent-loop.png')}
     alt="Agent Loop 流程图"
     width={500}

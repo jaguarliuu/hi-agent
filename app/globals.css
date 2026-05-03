@@ -951,3 +951,114 @@ html.dark .ha-source-link[data-type='repo'] .ha-source-link-icon {
     display: none;
   }
 }
+
+/* ============================================================
+ * Zoomable Image — 点击图片全屏放大预览
+ * ============================================================ */
+.ha-zoom-img {
+  max-width: 100%;
+  height: auto;
+  cursor: zoom-in;
+  border-radius: 8px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  display: block;
+  margin: 1.2rem auto;
+}
+
+.ha-zoom-img:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px -14px rgba(0, 0, 0, 0.35);
+}
+
+.ha-zoom-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(10, 10, 10, 0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px 24px;
+  animation: ha-zoom-fade 0.2s ease;
+  cursor: zoom-out;
+}
+
+.ha-zoom-opened {
+  max-width: min(95vw, 1600px);
+  max-height: 85vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 25px 70px -20px rgba(0, 0, 0, 0.65);
+  cursor: default;
+  animation: ha-zoom-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  background: transparent;
+}
+
+.ha-zoom-caption {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: min(80vw, 900px);
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.ha-zoom-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.ha-zoom-close:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: rotate(90deg);
+}
+
+@keyframes ha-zoom-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ha-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ha-zoom-img,
+  .ha-zoom-opened,
+  .ha-zoom-overlay,
+  .ha-zoom-close {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+  .ha-zoom-overlay {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
