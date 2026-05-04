@@ -1062,3 +1062,109 @@ html.dark .ha-source-link[data-type='repo'] .ha-source-link-icon {
     -webkit-backdrop-filter: none !important;
   }
 }
+
+/* =====================================================
+   Mermaid diagram container
+   Nextra 客户端渲染的 <div class="mermaid"> 默认 SVG
+   占满可用宽度，视觉上偏大。这里统一限制最大宽度、
+   居中、加柔和背景框，并把节点/连线配色调整为品牌色。
+===================================================== */
+.mermaid {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 680px;
+  margin: 2rem auto;
+  padding: 1.25rem 1rem;
+  background: var(--ha-bg-subtle);
+  border: 1px solid var(--ha-border);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.mermaid svg {
+  max-width: 100%;
+  height: auto !important;
+  font-family: inherit !important;
+}
+
+/* 节点主体 */
+.mermaid .node rect,
+.mermaid .node polygon,
+.mermaid .node circle,
+.mermaid .node ellipse,
+.mermaid .node path {
+  fill: var(--ha-bg) !important;
+  stroke: var(--ha-accent) !important;
+  stroke-width: 1.4px !important;
+  rx: 8px;
+  ry: 8px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.04));
+}
+
+/* 节点文字 */
+.mermaid .node .label,
+.mermaid .nodeLabel,
+.mermaid .node text {
+  color: var(--ha-fg) !important;
+  fill: var(--ha-fg) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+/* 连线 */
+.mermaid .edgePath .path,
+.mermaid .flowchart-link {
+  stroke: var(--ha-border-strong) !important;
+  stroke-width: 1.4px !important;
+}
+
+/* 连线箭头 */
+.mermaid .marker,
+.mermaid marker path {
+  fill: var(--ha-border-strong) !important;
+  stroke: var(--ha-border-strong) !important;
+}
+
+/* 连线标签（"是"/"否" 这种判断分支） */
+.mermaid .edgeLabel,
+.mermaid .edgeLabel rect {
+  background: var(--ha-bg) !important;
+  fill: var(--ha-bg) !important;
+  color: var(--ha-fg-muted) !important;
+  font-size: 12px !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+}
+
+.mermaid .edgeLabel foreignObject div {
+  background: transparent !important;
+  color: var(--ha-fg-muted) !important;
+}
+
+/* 判断节点（菱形）高亮 */
+.mermaid .node.default .label-container,
+.mermaid g.classGroup rect {
+  fill: var(--ha-accent-soft) !important;
+}
+
+/* 深色模式细节修正 */
+html.dark .mermaid .node rect,
+html.dark .mermaid .node polygon,
+html.dark .mermaid .node circle,
+html.dark .mermaid .node ellipse,
+html.dark .mermaid .node path {
+  fill: var(--ha-bg) !important;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+/* 窄屏：让容器可横向滚动而不是挤压变形 */
+@media (max-width: 640px) {
+  .mermaid {
+    max-width: 100%;
+    padding: 1rem 0.5rem;
+  }
+  .mermaid svg {
+    min-width: 520px;
+  }
+}
