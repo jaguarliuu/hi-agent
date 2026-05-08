@@ -24,6 +24,7 @@ export const initialPlaygroundState: PlaygroundState = {
 };
 
 export type PlaygroundEvent =
+  | { type: 'RESET'; sectionId: string }
   | { type: 'BOOT_STARTED'; sectionId: string }
   | { type: 'WORKSPACE_LOADING'; sectionId: string }
   | { type: 'WORKSPACE_READY'; sectionId: string; activeFile: string }
@@ -38,11 +39,18 @@ export function playgroundReducer(
   event: PlaygroundEvent
 ): PlaygroundState {
   switch (event.type) {
+    case 'RESET':
+      return {
+        ...initialPlaygroundState,
+        sectionId: event.sectionId
+      };
     case 'BOOT_STARTED':
       return {
         ...state,
         status: 'booting',
         sectionId: event.sectionId,
+        activeFile: null,
+        output: [],
         error: null
       };
     case 'WORKSPACE_LOADING':
@@ -50,6 +58,7 @@ export function playgroundReducer(
         ...state,
         status: 'loading',
         sectionId: event.sectionId,
+        activeFile: null,
         output: [],
         error: null
       };

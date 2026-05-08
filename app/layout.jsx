@@ -3,7 +3,6 @@ import { Banner, Head, Search } from 'nextra/components'
 import { getPageMap } from 'nextra/page-map'
 import 'nextra-theme-docs/style.css'
 import './globals.css'
-import { PlaygroundProvider } from './lib/playground/playground-provider'
 import { ThemeSwitchRelocator } from './theme-switch-relocator'
 
 export const metadata = {
@@ -70,23 +69,21 @@ export default async function RootLayout({ children }) {
         }}
       />
       <body>
-        <PlaygroundProvider>
-          <ThemeSwitchRelocator />
-          <Layout
-            banner={banner}
-            navbar={navbar}
-            search={search}
-            footer={footer}
-            pageMap={await getPageMap()}
-            docsRepositoryBase="https://github.com/jaguarliuu/hi-agent/tree/main"
-            editLink=""
-            feedback={{ content: '' }}
-            sidebar={{ defaultMenuCollapseLevel: 1, toggleButton: true }}
-            toc={{ backToTop: '回到顶部' }}
-          >
-            {children}
-          </Layout>
-        </PlaygroundProvider>
+        <ThemeSwitchRelocator />
+        <Layout
+          banner={banner}
+          navbar={navbar}
+          search={search}
+          footer={footer}
+          pageMap={await getPageMap()}
+          docsRepositoryBase="https://github.com/jaguarliuu/hi-agent/tree/main"
+          editLink=""
+          feedback={{ content: '' }}
+          sidebar={{ defaultMenuCollapseLevel: 1, toggleButton: true }}
+          toc={{ backToTop: '回到顶部' }}
+        >
+          {children}
+        </Layout>
       </body>
     </html>
   )

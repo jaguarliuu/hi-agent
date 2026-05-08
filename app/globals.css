@@ -1203,10 +1203,6 @@ html.dark .ha-playground {
   transform: translateX(0);
 }
 
-.ha-playground[aria-hidden='true'] {
-  pointer-events: none;
-}
-
 .ha-playground-header {
   display: flex;
   align-items: center;

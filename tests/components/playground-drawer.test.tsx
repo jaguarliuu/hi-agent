@@ -1,12 +1,32 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PlaygroundDrawer } from '@/app/lib/playground/playground-drawer';
 import {
   PlaygroundContext,
+  PlaygroundProvider,
+  usePlayground,
   type PlaygroundContextValue
 } from '@/app/lib/playground/playground-provider';
 import type { PlaygroundManifest } from '@/app/lib/playground/manifest-schema';
+
+const {
+  getPlaygroundManifestMock,
+  getWebcontainerMock,
+  listWorkspaceFilesMock,
+  prepareSectionWorkspaceMock,
+  readWorkspaceFileMock,
+  runManifestCommandMock,
+  writeWorkspaceFileMock
+} = vi.hoisted(() => ({
+  getPlaygroundManifestMock: vi.fn(),
+  getWebcontainerMock: vi.fn(),
+  listWorkspaceFilesMock: vi.fn(),
+  prepareSectionWorkspaceMock: vi.fn(),
+  readWorkspaceFileMock: vi.fn(),
+  runManifestCommandMock: vi.fn(),
+  writeWorkspaceFileMock: vi.fn()
+}));
 
 vi.mock('@monaco-editor/react', () => ({
   default: function MockMonacoEditor({
@@ -16,6 +36,19 @@ vi.mock('@monaco-editor/react', () => ({
   }) {
     return <div data-testid="monaco-editor">{value}</div>;
   }
+}));
+
+vi.mock('@/app/lib/playground/manifest-loader', () => ({
+  getPlaygroundManifest: getPlaygroundManifestMock
+}));
+
+vi.mock('@/app/lib/playground/webcontainer-manager', () => ({
+  getWebcontainer: getWebcontainerMock,
+  listWorkspaceFiles: listWorkspaceFilesMock,
+  prepareSectionWorkspace: prepareSectionWorkspaceMock,
+  readWorkspaceFile: readWorkspaceFileMock,
+  runManifestCommand: runManifestCommandMock,
+  writeWorkspaceFile: writeWorkspaceFileMock
 }));
 
 const manifest: PlaygroundManifest = {
@@ -68,7 +101,74 @@ function createContextValue(): PlaygroundContextValue {
   };
 }
 
+function PlaygroundHarness() {
+  const {
+    closeDrawer,
+    openProject,
+    runCommand,
+    files,
+    activeFileContent,
+    state
+  } = usePlayground();
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          void openProject(manifest.id);
+        }}
+      >
+        打开实验
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          void runCommand(manifest.id, 'run-demo');
+        }}
+      >
+        运行实验
+      </button>
+      <button type="button" onClick={closeDrawer}>
+        关闭实验
+      </button>
+      <div data-testid="file-count">{files.length}</div>
+      <div data-testid="active-file">{state.activeFile ?? ''}</div>
+      <div data-testid="active-content">{activeFileContent}</div>
+      <div data-testid="output">{state.output.join('|')}</div>
+    </>
+  );
+}
+
 describe('PlaygroundDrawer', () => {
+  beforeEach(() => {
+    getPlaygroundManifestMock.mockReturnValue(manifest);
+    getWebcontainerMock.mockResolvedValue({});
+    listWorkspaceFilesMock.mockResolvedValue(['src/main.ts', 'src/config.ts']);
+    prepareSectionWorkspaceMock.mockResolvedValue(undefined);
+    readWorkspaceFileMock.mockResolvedValue("console.log('hello')");
+    runManifestCommandMock.mockImplementation(
+      async (
+        _manifest: PlaygroundManifest,
+        _blockId: string,
+        onChunk: (chunk: string) => void
+      ) => {
+        onChunk('User: hi');
+        onChunk('Assistant: hello');
+        return 0;
+      }
+    );
+    writeWorkspaceFileMock.mockResolvedValue(undefined);
+    Object.defineProperty(window, 'crossOriginIsolated', {
+      value: true,
+      configurable: true
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders the playground title, file tree, editor, and output panel', () => {
     render(
       <PlaygroundContext.Provider value={createContextValue()}>
@@ -86,5 +186,90 @@ describe('PlaygroundDrawer', () => {
     );
     expect(screen.getByText('User: hi')).toBeInTheDocument();
     expect(screen.getByText('Assistant: hello')).toBeInTheDocument();
+  });
+
+  it('does not mount the drawer before the playground is opened', () => {
+    render(
+      <PlaygroundProvider>
+        <PlaygroundHarness />
+      </PlaygroundProvider>
+    );
+
+    expect(
+      screen.queryByRole('heading', { name: 'WebContainers 实验小节' })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Runnable playground')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('monaco-editor')).not.toBeInTheDocument();
+  });
+
+  it('clears stale workspace state when reopening in an unsupported browser', async () => {
+    render(
+      <PlaygroundProvider>
+        <PlaygroundHarness />
+      </PlaygroundProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '运行实验' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('file-count')).toHaveTextContent('2');
+    });
+    expect(screen.getByTestId('active-file')).toHaveTextContent('src/main.ts');
+    expect(screen.getByTestId('active-content')).toHaveTextContent(
+      "console.log('hello')"
+    );
+    expect(screen.getByTestId('output')).toHaveTextContent(
+      'User: hi|Assistant: hello'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '关闭' }));
+    Object.defineProperty(window, 'crossOriginIsolated', {
+      value: false,
+      configurable: true
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '打开实验' }));
+
+    await screen.findByText('unsupported');
+    expect(screen.getByTestId('file-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('active-file')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('active-content')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('output')).toBeEmptyDOMElement();
+    expect(
+      screen.getByText('WebContainers require a compatible desktop browser.')
+    ).toBeInTheDocument();
+  });
+
+  it('clears stale workspace state when booting the playground fails', async () => {
+    render(
+      <PlaygroundProvider>
+        <PlaygroundHarness />
+      </PlaygroundProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '运行实验' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('file-count')).toHaveTextContent('2');
+    });
+    expect(screen.getByTestId('active-content')).toHaveTextContent(
+      "console.log('hello')"
+    );
+    expect(screen.getByTestId('output')).toHaveTextContent(
+      'User: hi|Assistant: hello'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '关闭' }));
+    getWebcontainerMock.mockRejectedValueOnce(new Error('boot failed'));
+
+    fireEvent.click(screen.getByRole('button', { name: '打开实验' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('boot failed')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('file-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('active-file')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('active-content')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('output')).toBeEmptyDOMElement();
   });
 });

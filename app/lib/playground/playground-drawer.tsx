@@ -8,7 +8,6 @@ import { PlaygroundOutputPanel } from './playground-output-panel';
 
 export function PlaygroundDrawer() {
   const {
-    isOpen,
     manifest,
     state,
     files,
@@ -22,11 +21,7 @@ export function PlaygroundDrawer() {
   const title = manifest?.title ?? 'Runnable Example';
 
   return (
-    <aside
-      className={`ha-playground ${isOpen ? 'is-open' : ''}`}
-      aria-hidden={!isOpen}
-      aria-label="Runnable playground"
-    >
+    <aside className="ha-playground is-open" aria-label="Runnable playground">
       <header className="ha-playground-header">
         <div className="ha-playground-heading">
           <h2>{title}</h2>

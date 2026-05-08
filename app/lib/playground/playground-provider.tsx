@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import React, {
   createContext,
   startTransition,
@@ -23,7 +24,6 @@ import {
   runManifestCommand,
   writeWorkspaceFile
 } from './webcontainer-manager';
-import { PlaygroundDrawer } from './playground-drawer';
 
 export interface PlaygroundFileEntry {
   path: string;
@@ -56,6 +56,17 @@ function toFileEntries(files: string[]) {
   return files.map((path) => ({ path }));
 }
 
+const LazyPlaygroundDrawer = dynamic(
+  () =>
+    import('./playground-drawer').then((module) => ({
+      default: module.PlaygroundDrawer
+    })),
+  {
+    loading: () => null,
+    ssr: false
+  }
+);
+
 export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
   const [state, dispatch] = useReducer(playgroundReducer, initialPlaygroundState);
   const [isOpen, setIsOpen] = useState(false);
@@ -63,6 +74,13 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
   const [files, setFiles] = useState<PlaygroundFileEntry[]>([]);
   const [activeFileContent, setActiveFileContent] = useState('');
   const [activeFileAnchor, setActiveFileAnchor] = useState<string | null>(null);
+
+  function resetDrawerState(sectionId: string) {
+    setFiles([]);
+    setActiveFileContent('');
+    setActiveFileAnchor(null);
+    dispatch({ type: 'RESET', sectionId });
+  }
 
   async function loadFile(path: string, anchor: string | null, sectionId: string) {
     const content = await readWorkspaceFile(path);
@@ -79,6 +97,7 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
 
   async function openSection(sectionId: string, mode: OpenMode, blockId?: string) {
     const nextManifest = getPlaygroundManifest(sectionId);
+    resetDrawerState(sectionId);
     startTransition(() => {
       setManifest(nextManifest);
       setIsOpen(true);
@@ -178,7 +197,7 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
   return (
     <PlaygroundContext.Provider value={value}>
       {children}
-      <PlaygroundDrawer />
+      {isOpen ? <LazyPlaygroundDrawer /> : null}
     </PlaygroundContext.Provider>
   );
 }
