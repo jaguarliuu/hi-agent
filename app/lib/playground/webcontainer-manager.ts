@@ -18,7 +18,10 @@ async function fetchSnapshot(url: string) {
 
 export async function getWebcontainer() {
   if (!bootPromise) {
-    bootPromise = WebContainer.boot();
+    bootPromise = WebContainer.boot().catch((error) => {
+      bootPromise = null;
+      throw error;
+    });
   }
 
   return bootPromise;

@@ -10,6 +10,16 @@ const writeFileMock = vi.fn();
 const bootMock = vi.fn();
 const loadCachedWorkspaceMock = vi.fn();
 const saveCachedWorkspaceMock = vi.fn();
+let webcontainerMock: {
+  mount: typeof mountMock;
+  spawn: typeof spawnMock;
+  export: typeof exportMock;
+  fs: {
+    readdir: typeof readdirMock;
+    readFile: typeof readFileMock;
+    writeFile: typeof writeFileMock;
+  };
+};
 
 vi.mock('@webcontainer/api', () => ({
   WebContainer: {
@@ -59,7 +69,7 @@ describe('prepareSectionWorkspace', () => {
     readdirMock.mockResolvedValue([]);
     readFileMock.mockResolvedValue('');
     writeFileMock.mockResolvedValue(undefined);
-    bootMock.mockResolvedValue({
+    webcontainerMock = {
       mount: mountMock,
       spawn: spawnMock,
       export: exportMock,
@@ -68,7 +78,8 @@ describe('prepareSectionWorkspace', () => {
         readFile: readFileMock,
         writeFile: writeFileMock
       }
-    });
+    };
+    bootMock.mockResolvedValue(webcontainerMock);
     loadCachedWorkspaceMock.mockResolvedValue(null);
     saveCachedWorkspaceMock.mockResolvedValue(undefined);
     vi.stubGlobal(
@@ -104,5 +115,17 @@ describe('prepareSectionWorkspace', () => {
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(mountMock).toHaveBeenCalledTimes(3);
     expect(spawnMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('retries boot after a transient failure', async () => {
+    bootMock
+      .mockRejectedValueOnce(new Error('boot failed'))
+      .mockResolvedValueOnce(webcontainerMock);
+
+    const { getWebcontainer } = await import('@/app/lib/playground/webcontainer-manager');
+
+    await expect(getWebcontainer()).rejects.toThrow('boot failed');
+    await expect(getWebcontainer()).resolves.toBe(webcontainerMock);
+    expect(bootMock).toHaveBeenCalledTimes(2);
   });
 });
