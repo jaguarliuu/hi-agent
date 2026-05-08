@@ -6,6 +6,7 @@ import React, {
   startTransition,
   useContext,
   useReducer,
+  useRef,
   useState,
   type ReactNode
 } from 'react';
@@ -74,6 +75,7 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
   const [files, setFiles] = useState<PlaygroundFileEntry[]>([]);
   const [activeFileContent, setActiveFileContent] = useState('');
   const [activeFileAnchor, setActiveFileAnchor] = useState<string | null>(null);
+  const activeRequestIdRef = useRef(0);
 
   function resetDrawerState(sectionId: string) {
     setFiles([]);
@@ -82,8 +84,29 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
     dispatch({ type: 'RESET', sectionId });
   }
 
-  async function loadFile(path: string, anchor: string | null, sectionId: string) {
+  function startOpenRequest(sectionId: string) {
+    const requestId = activeRequestIdRef.current + 1;
+    activeRequestIdRef.current = requestId;
+    resetDrawerState(sectionId);
+    return requestId;
+  }
+
+  function isActiveRequest(requestId: number) {
+    return requestId === activeRequestIdRef.current;
+  }
+
+  async function loadFile(
+    path: string,
+    anchor: string | null,
+    sectionId: string,
+    requestId: number
+  ) {
     const content = await readWorkspaceFile(path);
+
+    if (!isActiveRequest(requestId)) {
+      return false;
+    }
+
     startTransition(() => {
       setActiveFileContent(content);
       setActiveFileAnchor(anchor);
@@ -93,11 +116,12 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
         activeFile: path
       });
     });
+    return true;
   }
 
   async function openSection(sectionId: string, mode: OpenMode, blockId?: string) {
     const nextManifest = getPlaygroundManifest(sectionId);
-    resetDrawerState(sectionId);
+    const requestId = startOpenRequest(sectionId);
     startTransition(() => {
       setManifest(nextManifest);
       setIsOpen(true);
@@ -105,7 +129,9 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
 
     if (!window.crossOriginIsolated) {
       startTransition(() => {
-        dispatch({ type: 'UNSUPPORTED' });
+        if (isActiveRequest(requestId)) {
+          dispatch({ type: 'UNSUPPORTED' });
+        }
       });
       return;
     }
@@ -113,10 +139,24 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
     try {
       dispatch({ type: 'BOOT_STARTED', sectionId });
       await getWebcontainer();
+
+      if (!isActiveRequest(requestId)) {
+        return;
+      }
+
       dispatch({ type: 'WORKSPACE_LOADING', sectionId });
 
       await prepareSectionWorkspace(nextManifest);
+      if (!isActiveRequest(requestId)) {
+        return;
+      }
+
       const workspaceFiles = await listWorkspaceFiles();
+
+      if (!isActiveRequest(requestId)) {
+        return;
+      }
+
       startTransition(() => {
         setFiles(toFileEntries(workspaceFiles));
       });
@@ -134,13 +174,28 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
       const targetAnchor =
         fileBlock && fileBlock.type === 'file-snippet' ? fileBlock.anchor : null;
 
-      await loadFile(targetPath, targetAnchor, sectionId);
+      const didLoadFile = await loadFile(
+        targetPath,
+        targetAnchor,
+        sectionId,
+        requestId
+      );
+
+      if (!didLoadFile || !isActiveRequest(requestId)) {
+        return;
+      }
 
       if (mode === 'command' && blockId) {
         dispatch({ type: 'COMMAND_STARTED', sectionId });
         const exitCode = await runManifestCommand(nextManifest, blockId, (chunk) => {
-          dispatch({ type: 'COMMAND_OUTPUT', chunk });
+          if (isActiveRequest(requestId)) {
+            dispatch({ type: 'COMMAND_OUTPUT', chunk });
+          }
         });
+
+        if (!isActiveRequest(requestId)) {
+          return;
+        }
 
         if (exitCode !== 0) {
           dispatch({
@@ -153,6 +208,10 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
         dispatch({ type: 'COMMAND_FINISHED' });
       }
     } catch (error) {
+      if (!isActiveRequest(requestId)) {
+        return;
+      }
+
       dispatch({
         type: 'FAILED',
         message: error instanceof Error ? error.message : 'Playground failed to start.'
@@ -165,7 +224,7 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
       return;
     }
 
-    await loadFile(path, null, state.sectionId);
+    await loadFile(path, null, state.sectionId, activeRequestIdRef.current);
   }
 
   async function updateActiveFile(next: string) {
@@ -189,7 +248,10 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
     openProject: (sectionId) => openSection(sectionId, 'project'),
     runCommand: (sectionId, blockId) => openSection(sectionId, 'command', blockId),
     openFile: (sectionId, blockId) => openSection(sectionId, 'file', blockId),
-    closeDrawer: () => setIsOpen(false),
+    closeDrawer: () => {
+      activeRequestIdRef.current += 1;
+      setIsOpen(false);
+    },
     selectFile,
     updateActiveFile
   };

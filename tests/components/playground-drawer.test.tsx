@@ -72,6 +72,17 @@ const manifest: PlaygroundManifest = {
   ]
 };
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+}
+
 function createContextValue(): PlaygroundContextValue {
   return {
     isOpen: true,
@@ -271,5 +282,42 @@ describe('PlaygroundDrawer', () => {
     expect(screen.getByTestId('active-file')).toBeEmptyDOMElement();
     expect(screen.getByTestId('active-content')).toBeEmptyDOMElement();
     expect(screen.getByTestId('output')).toBeEmptyDOMElement();
+  });
+
+  it('ignores late async results from a previous open after a newer open fails', async () => {
+    const firstFileList = createDeferred<string[]>();
+
+    listWorkspaceFilesMock
+      .mockImplementationOnce(() => firstFileList.promise)
+      .mockResolvedValueOnce(['src/main.ts', 'src/config.ts']);
+
+    render(
+      <PlaygroundProvider>
+        <PlaygroundHarness />
+      </PlaygroundProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '打开实验' }));
+
+    await waitFor(() => {
+      expect(listWorkspaceFilesMock).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '关闭' }));
+    Object.defineProperty(window, 'crossOriginIsolated', {
+      value: false,
+      configurable: true
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '打开实验' }));
+
+    await screen.findByText('unsupported');
+    firstFileList.resolve(['src/main.ts', 'src/config.ts']);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('file-count')).toHaveTextContent('0');
+    });
+    expect(screen.getByTestId('active-file')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('active-content')).toBeEmptyDOMElement();
   });
 });
