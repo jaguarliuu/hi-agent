@@ -52,16 +52,16 @@ function createContextValue(): PlaygroundContextValue {
     },
     files: [
       {
-        path: 'src/main.ts',
-        content: "console.log('hello')"
+        path: 'src/main.ts'
       },
       {
-        path: 'src/config.ts',
-        content: 'export const config = {}'
+        path: 'src/config.ts'
       }
     ],
     activeFileContent: "console.log('hello')",
-    openSection: vi.fn(),
+    openProject: vi.fn(),
+    runCommand: vi.fn(),
+    openFile: vi.fn(),
     closeDrawer: vi.fn(),
     selectFile: vi.fn(),
     updateActiveFile: vi.fn()
