@@ -8,18 +8,30 @@ import { Callout } from 'nextra/components'
 # WebContainers 实验小节
 
 <Callout type="info">
-这是一个独立的实验页，用于开发和验证可运行代码环境。当前页面先保持为可编译的静态内容，后续任务会把这些代码块接到交互式运行面板。
+这是一个独立的实验页，用于开发和验证可运行代码环境。你可以直接复制代码，也可以点击按钮打开右侧 Playground。
 </Callout>
 
+<PlaygroundSection sectionId="labs-01-webcontainers-pilot">
+
+<OpenProjectButton blockId="open-example">
+打开完整项目
+</OpenProjectButton>
+
 ## 安装依赖
+
+<CommandBlock blockId="install-deps">
 
 ```bash
 npm install
 ```
 
+</CommandBlock>
+
 ## `src/config.ts`
 
-```ts
+<RunnableCodeBlock blockId="config-snippet">
+
+```ts filename="src/config.ts"
 export function loadConfig() {
   const apiKey = process.env.OPENAI_API_KEY?.trim() ?? '';
 
@@ -32,9 +44,13 @@ export function loadConfig() {
 }
 ```
 
+</RunnableCodeBlock>
+
 ## `src/main.ts`
 
-```ts
+<RunnableCodeBlock blockId="main-ts-snippet">
+
+```ts filename="src/main.ts"
 async function main() {
   const prompt = '请介绍一下 Agent 是什么';
   const config = loadConfig();
@@ -46,8 +62,16 @@ async function main() {
 }
 ```
 
+</RunnableCodeBlock>
+
 ## 运行 Demo
+
+<CommandBlock blockId="run-demo">
 
 ```bash
 npm run chat
 ```
+
+</CommandBlock>
+
+</PlaygroundSection>

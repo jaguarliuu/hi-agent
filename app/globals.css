@@ -1363,3 +1363,40 @@ html.dark .ha-playground-output-shell {
   display: block;
   white-space: pre-wrap;
 }
+
+.ha-open-project-button,
+.ha-runnable-block-action {
+  border: 1px solid var(--ha-border);
+  background: var(--ha-bg-subtle);
+  color: var(--ha-fg);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 12px;
+  line-height: 1;
+  transition: border-color 0.2s ease, color 0.2s ease,
+    background 0.2s ease, transform 0.2s ease;
+}
+
+.ha-open-project-button:hover,
+.ha-runnable-block-action:hover {
+  color: var(--ha-accent);
+  border-color: var(--ha-accent-glow);
+  background: var(--ha-accent-soft);
+  transform: translateY(-1px);
+}
+
+.ha-open-project-button {
+  display: inline-flex;
+  align-items: center;
+  margin: 8px 0 18px;
+}
+
+.ha-runnable-block {
+  display: grid;
+  gap: 10px;
+}
+
+.ha-runnable-block-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
