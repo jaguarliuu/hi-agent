@@ -4,7 +4,8 @@ import type { PlaygroundManifest } from './manifest-schema';
 
 const CACHE_TTL_MS = 30 * 60 * 1000;
 let bootPromise: Promise<WebContainer> | null = null;
-const preparedSections = new Set<string>();
+let mountedSectionId: string | null = null;
+let preparedSectionId: string | null = null;
 
 async function fetchSnapshot(url: string) {
   const response = await fetch(url);
@@ -25,16 +26,22 @@ export async function getWebcontainer() {
 
 export async function mountSectionWorkspace(manifest: PlaygroundManifest) {
   const webcontainer = await getWebcontainer();
+  if (mountedSectionId === manifest.id) {
+    return webcontainer;
+  }
+
   const restored = await loadCachedWorkspace(manifest.id);
   const snapshot = restored ?? (await fetchSnapshot(manifest.snapshotUrl));
   await webcontainer.mount(snapshot);
+  mountedSectionId = manifest.id;
+  preparedSectionId = null;
   return webcontainer;
 }
 
 export async function prepareSectionWorkspace(manifest: PlaygroundManifest) {
   const webcontainer = await mountSectionWorkspace(manifest);
 
-  if (!preparedSections.has(manifest.id)) {
+  if (preparedSectionId !== manifest.id) {
     for (const command of manifest.startup.installCommands) {
       const process = await webcontainer.spawn(command.cmd, command.args, {
         output: true
@@ -44,7 +51,7 @@ export async function prepareSectionWorkspace(manifest: PlaygroundManifest) {
         throw new Error(`Install command failed: ${command.cmd} ${command.args.join(' ')}`);
       }
     }
-    preparedSections.add(manifest.id);
+    preparedSectionId = manifest.id;
   }
 
   return webcontainer;
