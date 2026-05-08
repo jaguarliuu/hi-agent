@@ -1,9 +1,11 @@
-export const WEBCONTAINER_HEADERS = [
+'use strict';
+
+const WEBCONTAINER_HEADERS = [
   { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' }
 ];
 
-export function getWebcontainerHeaderEntries() {
+function getWebcontainerHeaderEntries() {
   return [
     {
       source: '/:path*',
@@ -11,3 +13,16 @@ export function getWebcontainerHeaderEntries() {
     }
   ];
 }
+
+function shouldEnableWebcontainerHeaders({
+  nodeEnv,
+  enableRuntimeHeaders = false
+} = {}) {
+  return nodeEnv === 'development' || enableRuntimeHeaders;
+}
+
+module.exports = {
+  WEBCONTAINER_HEADERS,
+  getWebcontainerHeaderEntries,
+  shouldEnableWebcontainerHeaders
+};
