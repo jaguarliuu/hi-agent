@@ -104,7 +104,32 @@ Cross-Origin-Opener-Policy: same-origin
 
 ### Deployment Consequence
 
-The current static-export docs architecture can remain, but the production host must be changed to one that can set the required headers. Inference from current repo structure: the existing GitHub Pages-oriented deployment is not a good fit for this requirement.
+The current GitHub Pages-oriented static export deployment is not a good fit for this requirement.
+
+The recommended direction is:
+
+- switch to server deployment for the docs app
+- remove the requirement to ship via `output: 'export'`
+- serve the app from infrastructure that can reliably set the required headers
+
+### Docker Deployment
+
+Docker deployment is supported and recommended.
+
+In this architecture, Docker is used to deploy the docs application, not to host the code execution runtime. The actual example execution still happens inside the reader's browser through `WebContainers`.
+
+A practical production shape is:
+
+- one `Next.js` app container
+- one reverse proxy or edge layer that terminates `HTTPS`
+- proxy-level or app-level configuration for `COOP/COEP`
+
+Docker helps because it gives the project:
+
+- stable server deployment instead of static export constraints
+- full control over response headers
+- easy rollout to a VM, ECS, Kubernetes, Railway, Fly.io, or similar hosts
+- a natural path for later adding API routes or a lightweight backend proxy
 
 ### Browser Support Policy
 
