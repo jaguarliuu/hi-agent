@@ -1,0 +1,53 @@
+---
+title: WebContainers 实验小节
+description: 独立的实验页，用于验证可运行代码环境，不修改现有课程章节正文。
+---
+
+import { Callout } from 'nextra/components'
+
+# WebContainers 实验小节
+
+<Callout type="info">
+这是一个独立的实验页，用于开发和验证可运行代码环境。当前页面先保持为可编译的静态内容，后续任务会把这些代码块接到交互式运行面板。
+</Callout>
+
+## 安装依赖
+
+```bash
+npm install
+```
+
+## `src/config.ts`
+
+```ts
+export function loadConfig() {
+  const apiKey = process.env.OPENAI_API_KEY?.trim() ?? '';
+
+  return {
+    baseUrl: process.env.OPENAI_BASE_URL?.trim() || 'https://api.openai.com/v1',
+    apiKey,
+    model: process.env.OPENAI_MODEL?.trim() || 'gpt-4.1-mini',
+    useMock: apiKey.length === 0
+  };
+}
+```
+
+## `src/main.ts`
+
+```ts
+async function main() {
+  const prompt = '请介绍一下 Agent 是什么';
+  const config = loadConfig();
+  const client = new OpenAiChatClient(config);
+  const reply = await client.chat(prompt);
+
+  console.log(`User: ${prompt}`);
+  console.log(`Assistant: ${reply}`);
+}
+```
+
+## 运行 Demo
+
+```bash
+npm run chat
+```

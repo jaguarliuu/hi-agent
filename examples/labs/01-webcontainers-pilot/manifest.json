@@ -1,0 +1,46 @@
+{
+  "id": "labs-01-webcontainers-pilot",
+  "title": "WebContainers 实验小节",
+  "snapshotId": "labs-01-webcontainers-pilot-v1",
+  "snapshotUrl": "/webcontainer-snapshots/labs-01-webcontainers-pilot.bin",
+  "defaultOpenFile": "src/main.ts",
+  "startup": {
+    "installCommands": [
+      { "cmd": "npm", "args": ["install"] }
+    ],
+    "runCommands": [
+      { "cmd": "npm", "args": ["run", "chat"] }
+    ],
+    "env": ["OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL"]
+  },
+  "blocks": [
+    {
+      "blockId": "install-deps",
+      "type": "command",
+      "label": "安装依赖",
+      "command": { "cmd": "npm", "args": ["install"] }
+    },
+    {
+      "blockId": "open-example",
+      "type": "project-open"
+    },
+    {
+      "blockId": "main-ts-snippet",
+      "type": "file-snippet",
+      "path": "src/main.ts",
+      "anchor": "@anchor:main-entry"
+    },
+    {
+      "blockId": "config-snippet",
+      "type": "file-snippet",
+      "path": "src/config.ts",
+      "anchor": "@anchor:load-config"
+    },
+    {
+      "blockId": "run-demo",
+      "type": "command",
+      "label": "运行 Demo",
+      "command": { "cmd": "npm", "args": ["run", "chat"] }
+    }
+  ]
+}

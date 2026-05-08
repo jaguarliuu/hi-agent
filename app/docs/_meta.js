@@ -10,5 +10,9 @@ export default {
   'context-engineering': '04 · Context Engineering',
   memory: '05 · Memory',
   'multi-agent': '06 · Multi-Agent',
-  harness: '07 · Harness'
-}
+  harness: '07 · Harness',
+  labs: {
+    title: 'Labs',
+    display: 'hidden'
+  }
+};

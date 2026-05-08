@@ -12,6 +12,7 @@ dist
 *.log
 .env*.local
 .worktrees/
+public/webcontainer-snapshots
 
 # ts
 *.tsbuildinfo
