@@ -18,11 +18,13 @@ import {
   type PlaygroundState
 } from './playground-state';
 import {
+  ensureInteractiveShell,
   getWebcontainer,
   listWorkspaceFiles,
   prepareSectionWorkspace,
   readWorkspaceFile,
   runManifestCommand,
+  teardownInteractiveShell,
   writeWorkspaceFile
 } from './webcontainer-manager';
 
@@ -185,23 +187,13 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
         return;
       }
 
+      await ensureInteractiveShell(sectionId);
+
       if (mode === 'command' && blockId) {
-        dispatch({ type: 'COMMAND_STARTED', sectionId });
-        const exitCode = await runManifestCommand(nextManifest, blockId, (chunk) => {
-          if (isActiveRequest(requestId)) {
-            dispatch({ type: 'COMMAND_OUTPUT', chunk });
-          }
-        });
+        dispatch({ type: 'COMMAND_DISPATCHED', sectionId });
+        await runManifestCommand(nextManifest, blockId);
 
         if (!isActiveRequest(requestId)) {
-          return;
-        }
-
-        if (exitCode !== 0) {
-          dispatch({
-            type: 'FAILED',
-            message: `Command failed with exit code ${exitCode}`
-          });
           return;
         }
 
@@ -250,6 +242,7 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
     openFile: (sectionId, blockId) => openSection(sectionId, 'file', blockId),
     closeDrawer: () => {
       activeRequestIdRef.current += 1;
+      void teardownInteractiveShell();
       setIsOpen(false);
     },
     selectFile,

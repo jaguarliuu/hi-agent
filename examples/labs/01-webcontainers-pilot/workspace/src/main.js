@@ -1,5 +1,5 @@
-import { loadConfig } from './config';
-import { OpenAiChatClient } from './openai-chat-client';
+import { loadConfig } from './config.js';
+import { OpenAiChatClient } from './openai-chat-client.js';
 
 // @anchor:main-entry
 async function main() {

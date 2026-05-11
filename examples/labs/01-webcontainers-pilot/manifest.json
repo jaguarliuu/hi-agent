@@ -1,13 +1,11 @@
 {
   "id": "labs-01-webcontainers-pilot",
   "title": "WebContainers 实验小节",
-  "snapshotId": "labs-01-webcontainers-pilot-v1",
+  "snapshotId": "labs-01-webcontainers-pilot-v2",
   "snapshotUrl": "/webcontainer-snapshots/labs-01-webcontainers-pilot.bin",
-  "defaultOpenFile": "src/main.ts",
+  "defaultOpenFile": "src/main.js",
   "startup": {
-    "installCommands": [
-      { "cmd": "npm", "args": ["install"] }
-    ],
+    "installCommands": [],
     "runCommands": [
       { "cmd": "npm", "args": ["run", "chat"] }
     ],
@@ -27,13 +25,13 @@
     {
       "blockId": "main-ts-snippet",
       "type": "file-snippet",
-      "path": "src/main.ts",
+      "path": "src/main.js",
       "anchor": "@anchor:main-entry"
     },
     {
       "blockId": "config-snippet",
       "type": "file-snippet",
-      "path": "src/config.ts",
+      "path": "src/config.js",
       "anchor": "@anchor:load-config"
     },
     {

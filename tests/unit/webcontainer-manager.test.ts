@@ -128,4 +128,72 @@ describe('prepareSectionWorkspace', () => {
     await expect(getWebcontainer()).resolves.toBe(webcontainerMock);
     expect(bootMock).toHaveBeenCalledTimes(2);
   });
+
+  it('does not run install commands when the snapshot is already prepared', async () => {
+    const { prepareSectionWorkspace } = await import('@/app/lib/playground/webcontainer-manager');
+    const manifest = {
+      ...createManifest('labs-01-webcontainers-pilot'),
+      startup: {
+        installCommands: [],
+        runCommands: [],
+        env: []
+      }
+    } satisfies PlaygroundManifest;
+
+    await prepareSectionWorkspace(manifest);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(mountMock).toHaveBeenCalledTimes(1);
+    expect(spawnMock).not.toHaveBeenCalled();
+  });
+
+  it('lists workspace files from the project root recursively', async () => {
+    readdirMock.mockImplementation(async (path: string) => {
+      if (path === '.') {
+        return [
+          {
+            name: 'src',
+            isFile: () => false,
+            isDirectory: () => true
+          },
+          {
+            name: 'package.json',
+            isFile: () => true,
+            isDirectory: () => false
+          },
+          {
+            name: 'tsconfig.json',
+            isFile: () => true,
+            isDirectory: () => false
+          }
+        ];
+      }
+
+      if (path === 'src') {
+        return [
+          {
+            name: 'main.ts',
+            isFile: () => true,
+            isDirectory: () => false
+          },
+          {
+            name: 'config.ts',
+            isFile: () => true,
+            isDirectory: () => false
+          }
+        ];
+      }
+
+      return [];
+    });
+
+    const { listWorkspaceFiles } = await import('@/app/lib/playground/webcontainer-manager');
+
+    await expect(listWorkspaceFiles()).resolves.toEqual([
+      'package.json',
+      'src/config.ts',
+      'src/main.ts',
+      'tsconfig.json'
+    ]);
+  });
 });

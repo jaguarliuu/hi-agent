@@ -13,10 +13,41 @@ interface RunnableCodeBlockProps {
   children: ReactNode;
 }
 
+function ActionIcon({ kind }: { kind: RunnableActionKind }) {
+  if (kind === 'command') {
+    return (
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 16 16"
+        className="ha-runnable-block-action-icon"
+      >
+        <path d="M5 3.75v8.5L12 8 5 3.75Z" fill="currentColor" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      className="ha-runnable-block-action-icon"
+    >
+      <path
+        d="M5.25 4 2.5 8l2.75 4M10.75 4 13.5 8l-2.75 4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
 export function RunnableCodeBlock({
   blockId,
   actionKind = 'file',
-  actionLabel = '打开编辑器',
+  actionLabel = '应用',
   children
 }: RunnableCodeBlockProps) {
   const { runCommand, openFile } = usePlayground();
@@ -32,13 +63,14 @@ export function RunnableCodeBlock({
   }
 
   return (
-    <div className="ha-runnable-block">
+    <div className="ha-runnable-block" data-action-kind={actionKind}>
       <div className="ha-runnable-block-toolbar">
         <button
           type="button"
           className="ha-runnable-block-action"
           onClick={handleAction}
         >
+          <ActionIcon kind={actionKind} />
           {actionLabel}
         </button>
       </div>

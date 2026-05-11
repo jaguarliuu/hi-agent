@@ -17,7 +17,9 @@ const {
   prepareSectionWorkspaceMock,
   readWorkspaceFileMock,
   runManifestCommandMock,
-  writeWorkspaceFileMock
+  writeWorkspaceFileMock,
+  ensureInteractiveShellMock,
+  teardownInteractiveShellMock
 } = vi.hoisted(() => ({
   getPlaygroundManifestMock: vi.fn(),
   getWebcontainerMock: vi.fn(),
@@ -25,7 +27,9 @@ const {
   prepareSectionWorkspaceMock: vi.fn(),
   readWorkspaceFileMock: vi.fn(),
   runManifestCommandMock: vi.fn(),
-  writeWorkspaceFileMock: vi.fn()
+  writeWorkspaceFileMock: vi.fn(),
+  ensureInteractiveShellMock: vi.fn(),
+  teardownInteractiveShellMock: vi.fn()
 }));
 
 vi.mock('@monaco-editor/react', () => ({
@@ -35,6 +39,12 @@ vi.mock('@monaco-editor/react', () => ({
     value?: string;
   }) {
     return <div data-testid="monaco-editor">{value}</div>;
+  }
+}));
+
+vi.mock('@/app/lib/playground/playground-terminal', () => ({
+  PlaygroundTerminal: function MockPlaygroundTerminal() {
+    return <div data-testid="playground-terminal" />;
   }
 }));
 
@@ -48,7 +58,9 @@ vi.mock('@/app/lib/playground/webcontainer-manager', () => ({
   prepareSectionWorkspace: prepareSectionWorkspaceMock,
   readWorkspaceFile: readWorkspaceFileMock,
   runManifestCommand: runManifestCommandMock,
-  writeWorkspaceFile: writeWorkspaceFileMock
+  writeWorkspaceFile: writeWorkspaceFileMock,
+  ensureInteractiveShell: ensureInteractiveShellMock,
+  teardownInteractiveShell: teardownInteractiveShellMock
 }));
 
 const manifest: PlaygroundManifest = {
@@ -91,7 +103,6 @@ function createContextValue(): PlaygroundContextValue {
       status: 'ready',
       sectionId: manifest.id,
       activeFile: 'src/main.ts',
-      output: ['User: hi', 'Assistant: hello'],
       error: null
     },
     files: [
@@ -103,6 +114,7 @@ function createContextValue(): PlaygroundContextValue {
       }
     ],
     activeFileContent: "console.log('hello')",
+    activeFileAnchor: null,
     openProject: vi.fn(),
     runCommand: vi.fn(),
     openFile: vi.fn(),
@@ -146,7 +158,7 @@ function PlaygroundHarness() {
       <div data-testid="file-count">{files.length}</div>
       <div data-testid="active-file">{state.activeFile ?? ''}</div>
       <div data-testid="active-content">{activeFileContent}</div>
-      <div data-testid="output">{state.output.join('|')}</div>
+      <div data-testid="error">{state.error ?? ''}</div>
     </>
   );
 }
@@ -158,18 +170,16 @@ describe('PlaygroundDrawer', () => {
     listWorkspaceFilesMock.mockResolvedValue(['src/main.ts', 'src/config.ts']);
     prepareSectionWorkspaceMock.mockResolvedValue(undefined);
     readWorkspaceFileMock.mockResolvedValue("console.log('hello')");
-    runManifestCommandMock.mockImplementation(
-      async (
-        _manifest: PlaygroundManifest,
-        _blockId: string,
-        onChunk: (chunk: string) => void
-      ) => {
-        onChunk('User: hi');
-        onChunk('Assistant: hello');
-        return 0;
-      }
-    );
+    runManifestCommandMock.mockResolvedValue('npm run chat');
     writeWorkspaceFileMock.mockResolvedValue(undefined);
+    ensureInteractiveShellMock.mockResolvedValue({
+      process: {},
+      input: { write: vi.fn().mockResolvedValue(undefined) },
+      output: new ReadableStream(),
+      resize: vi.fn(),
+      dispose: vi.fn().mockResolvedValue(undefined)
+    });
+    teardownInteractiveShellMock.mockResolvedValue(undefined);
     Object.defineProperty(window, 'crossOriginIsolated', {
       value: true,
       configurable: true
@@ -180,7 +190,7 @@ describe('PlaygroundDrawer', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the playground title, file tree, editor, and output panel', () => {
+  it('renders the playground title, file tree, editor, and terminal', () => {
     render(
       <PlaygroundContext.Provider value={createContextValue()}>
         <PlaygroundDrawer />
@@ -195,8 +205,7 @@ describe('PlaygroundDrawer', () => {
     expect(screen.getByTestId('monaco-editor')).toHaveTextContent(
       "console.log('hello')"
     );
-    expect(screen.getByText('User: hi')).toBeInTheDocument();
-    expect(screen.getByText('Assistant: hello')).toBeInTheDocument();
+    expect(screen.getByTestId('playground-terminal')).toBeInTheDocument();
   });
 
   it('does not mount the drawer before the playground is opened', () => {
@@ -229,9 +238,6 @@ describe('PlaygroundDrawer', () => {
     expect(screen.getByTestId('active-content')).toHaveTextContent(
       "console.log('hello')"
     );
-    expect(screen.getByTestId('output')).toHaveTextContent(
-      'User: hi|Assistant: hello'
-    );
 
     fireEvent.click(screen.getByRole('button', { name: '关闭' }));
     Object.defineProperty(window, 'crossOriginIsolated', {
@@ -245,7 +251,6 @@ describe('PlaygroundDrawer', () => {
     expect(screen.getByTestId('file-count')).toHaveTextContent('0');
     expect(screen.getByTestId('active-file')).toBeEmptyDOMElement();
     expect(screen.getByTestId('active-content')).toBeEmptyDOMElement();
-    expect(screen.getByTestId('output')).toBeEmptyDOMElement();
     expect(
       screen.getByText('WebContainers require a compatible desktop browser.')
     ).toBeInTheDocument();
@@ -266,9 +271,6 @@ describe('PlaygroundDrawer', () => {
     expect(screen.getByTestId('active-content')).toHaveTextContent(
       "console.log('hello')"
     );
-    expect(screen.getByTestId('output')).toHaveTextContent(
-      'User: hi|Assistant: hello'
-    );
 
     fireEvent.click(screen.getByRole('button', { name: '关闭' }));
     getWebcontainerMock.mockRejectedValueOnce(new Error('boot failed'));
@@ -276,12 +278,11 @@ describe('PlaygroundDrawer', () => {
     fireEvent.click(screen.getByRole('button', { name: '打开实验' }));
 
     await waitFor(() => {
-      expect(screen.getByText('boot failed')).toBeInTheDocument();
+      expect(screen.getByTestId('error')).toHaveTextContent('boot failed');
     });
     expect(screen.getByTestId('file-count')).toHaveTextContent('0');
     expect(screen.getByTestId('active-file')).toBeEmptyDOMElement();
     expect(screen.getByTestId('active-content')).toBeEmptyDOMElement();
-    expect(screen.getByTestId('output')).toBeEmptyDOMElement();
   });
 
   it('ignores late async results from a previous open after a newer open fails', async () => {

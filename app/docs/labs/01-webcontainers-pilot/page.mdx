@@ -14,7 +14,7 @@ import { Callout } from 'nextra/components'
 <PlaygroundSection sectionId="labs-01-webcontainers-pilot">
 
 <OpenProjectButton blockId="open-example">
-打开完整项目
+编辑器
 </OpenProjectButton>
 
 ## 安装依赖
@@ -27,11 +27,11 @@ npm install
 
 </CommandBlock>
 
-## `src/config.ts`
+## `src/config.js`
 
 <RunnableCodeBlock blockId="config-snippet">
 
-```ts filename="src/config.ts"
+```js filename="src/config.js"
 export function loadConfig() {
   const apiKey = process.env.OPENAI_API_KEY?.trim() ?? '';
 
@@ -46,11 +46,14 @@ export function loadConfig() {
 
 </RunnableCodeBlock>
 
-## `src/main.ts`
+## `src/main.js`
 
 <RunnableCodeBlock blockId="main-ts-snippet">
 
-```ts filename="src/main.ts"
+```js filename="src/main.js"
+import { loadConfig } from './config.js';
+import { OpenAiChatClient } from './openai-chat-client.js';
+
 async function main() {
   const prompt = '请介绍一下 Agent 是什么';
   const config = loadConfig();

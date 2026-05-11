@@ -1,16 +1,5 @@
-import { config as loadDotenv } from 'dotenv';
-
-loadDotenv();
-
-export interface AppConfig {
-  baseUrl: string;
-  apiKey: string;
-  model: string;
-  useMock: boolean;
-}
-
 // @anchor:load-config
-export function loadConfig(): AppConfig {
+export function loadConfig() {
   const apiKey = process.env.OPENAI_API_KEY?.trim() ?? '';
 
   return {

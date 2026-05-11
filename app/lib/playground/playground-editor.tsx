@@ -37,8 +37,37 @@ export function PlaygroundEditor({
     <Editor
       height="100%"
       path={path ?? undefined}
-      language={path?.endsWith('.ts') ? 'typescript' : 'plaintext'}
+      language={resolveEditorLanguage(path)}
+      theme="vs-dark"
       value={value}
+      beforeMount={(monaco) => {
+        monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+          allowNonTsExtensions: true,
+          module: monaco.languages.typescript.ModuleKind.ESNext,
+          moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+          target: monaco.languages.typescript.ScriptTarget.ES2022,
+          jsx: monaco.languages.typescript.JsxEmit.ReactJSX,
+          esModuleInterop: true,
+          allowSyntheticDefaultImports: true,
+          resolveJsonModule: true
+        });
+        monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+          noSemanticValidation: true,
+          noSyntaxValidation: false
+        });
+        monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+          allowNonTsExtensions: true,
+          module: monaco.languages.typescript.ModuleKind.ESNext,
+          moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+          target: monaco.languages.typescript.ScriptTarget.ES2022,
+          allowSyntheticDefaultImports: true,
+          resolveJsonModule: true
+        });
+        monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+          noSemanticValidation: true,
+          noSyntaxValidation: false
+        });
+      }}
       onChange={(next) => {
         void onChange(next ?? '');
       }}
@@ -56,8 +85,38 @@ export function PlaygroundEditor({
       options={{
         minimap: { enabled: false },
         fontSize: 13,
-        scrollBeyondLastLine: false
+        lineNumbersMinChars: 3,
+        scrollBeyondLastLine: false,
+        roundedSelection: false,
+        padding: { top: 14, bottom: 14 },
+        renderLineHighlight: 'gutter',
+        wordWrap: 'on',
+        automaticLayout: true
       }}
     />
   );
+}
+
+function resolveEditorLanguage(path: string | null) {
+  if (!path) {
+    return 'plaintext';
+  }
+
+  if (path.endsWith('.ts') || path.endsWith('.tsx')) {
+    return 'typescript';
+  }
+
+  if (path.endsWith('.js') || path.endsWith('.mjs') || path.endsWith('.cjs')) {
+    return 'javascript';
+  }
+
+  if (path.endsWith('.json')) {
+    return 'json';
+  }
+
+  if (path.endsWith('.sh')) {
+    return 'shell';
+  }
+
+  return 'plaintext';
 }

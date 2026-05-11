@@ -10,7 +10,7 @@ describe('playground manifest schema', () => {
     const manifest = parsePlaygroundManifest(pilotManifest);
 
     expect(manifest.id).toBe('labs-01-webcontainers-pilot');
-    expect(manifest.defaultOpenFile).toBe('src/main.ts');
+    expect(manifest.defaultOpenFile).toBe('src/main.js');
     expect(manifest.blocks.map((block) => block.blockId)).toEqual([
       'install-deps',
       'open-example',

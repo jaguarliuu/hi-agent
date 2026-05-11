@@ -38,7 +38,6 @@ function createContextValue(): PlaygroundContextValue {
       status: 'idle',
       sectionId: null,
       activeFile: null,
-      output: [],
       error: null
     },
     files: [],

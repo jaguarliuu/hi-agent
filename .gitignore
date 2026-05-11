@@ -16,3 +16,5 @@ public/webcontainer-snapshots
 
 # ts
 *.tsbuildinfo
+
+.superpowers/

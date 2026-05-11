@@ -1,11 +1,22 @@
-import { WebContainer } from '@webcontainer/api';
-import { loadCachedWorkspace, saveCachedWorkspace } from './workspace-cache';
+import { WebContainer, type WebContainerProcess } from '@webcontainer/api';
+import { loadCachedWorkspace } from './workspace-cache';
 import type { PlaygroundManifest } from './manifest-schema';
 
-const CACHE_TTL_MS = 30 * 60 * 1000;
+const IGNORED_DIRECTORIES = new Set(['.git', '.next', 'node_modules', 'out']);
 let bootPromise: Promise<WebContainer> | null = null;
 let mountedSectionId: string | null = null;
 let preparedSectionId: string | null = null;
+
+export interface InteractiveShellHandle {
+  process: WebContainerProcess;
+  input: WritableStreamDefaultWriter<string>;
+  output: ReadableStream<string>;
+  resize: (cols: number, rows: number) => void;
+  dispose: () => Promise<void>;
+}
+
+let activeShell: InteractiveShellHandle | null = null;
+let activeShellSectionId: string | null = null;
 
 async function fetchSnapshot(url: string) {
   const response = await fetch(url);
@@ -33,7 +44,7 @@ export async function mountSectionWorkspace(manifest: PlaygroundManifest) {
     return webcontainer;
   }
 
-  const restored = await loadCachedWorkspace(manifest.id);
+  const restored = await loadCachedWorkspace(manifest.id, manifest.snapshotId);
   const snapshot = restored ?? (await fetchSnapshot(manifest.snapshotUrl));
   await webcontainer.mount(snapshot);
   mountedSectionId = manifest.id;
@@ -60,12 +71,37 @@ export async function prepareSectionWorkspace(manifest: PlaygroundManifest) {
   return webcontainer;
 }
 
+async function walkWorkspaceDirectory(
+  webcontainer: WebContainer,
+  directory: string
+): Promise<string[]> {
+  const entries = await webcontainer.fs.readdir(directory, { withFileTypes: true });
+  const files: string[] = [];
+
+  for (const entry of entries) {
+    const entryPath = directory === '.' ? entry.name : `${directory}/${entry.name}`;
+
+    if (entry.isDirectory()) {
+      if (IGNORED_DIRECTORIES.has(entry.name)) {
+        continue;
+      }
+
+      files.push(...(await walkWorkspaceDirectory(webcontainer, entryPath)));
+      continue;
+    }
+
+    if (entry.isFile()) {
+      files.push(entryPath);
+    }
+  }
+
+  return files;
+}
+
 export async function listWorkspaceFiles() {
   const webcontainer = await getWebcontainer();
-  const entries = await webcontainer.fs.readdir('src', { withFileTypes: true });
-  return entries
-    .filter((entry) => entry.isFile())
-    .map((entry) => `src/${entry.name}`);
+  const files = await walkWorkspaceDirectory(webcontainer, '.');
+  return files.sort((left, right) => left.localeCompare(right));
 }
 
 export async function readWorkspaceFile(path: string) {
@@ -78,24 +114,11 @@ export async function writeWorkspaceFile(path: string, content: string) {
   await webcontainer.fs.writeFile(path, content);
 }
 
-export async function persistSectionWorkspace(manifest: PlaygroundManifest) {
-  const webcontainer = await getWebcontainer();
-  const snapshot = await webcontainer.export('/', {
-    format: 'binary',
-    excludes: ['node_modules/**']
-  });
-
-  if (snapshot instanceof Uint8Array) {
-    await saveCachedWorkspace(manifest.id, snapshot.slice().buffer, CACHE_TTL_MS);
-  }
-}
-
 export async function runManifestCommand(
   manifest: PlaygroundManifest,
-  blockId: string,
-  onOutput: (chunk: string) => void
+  blockId: string
 ) {
-  const webcontainer = await prepareSectionWorkspace(manifest);
+  await prepareSectionWorkspace(manifest);
   const block = manifest.blocks.find(
     (entry) => entry.blockId === blockId && entry.type === 'command'
   );
@@ -104,19 +127,70 @@ export async function runManifestCommand(
     throw new Error(`Unknown command block: ${blockId}`);
   }
 
-  const process = await webcontainer.spawn(block.command.cmd, block.command.args, {
-    output: true
+  const commandLine = [block.command.cmd, ...block.command.args]
+    .map((part) => part)
+    .join(' ');
+
+  const shell = await ensureInteractiveShell(manifest.id);
+  await shell.input.write(`${commandLine}\n`);
+  return commandLine;
+}
+
+async function spawnShell(sectionId: string): Promise<InteractiveShellHandle> {
+  const webcontainer = await getWebcontainer();
+  const process = await webcontainer.spawn('jsh', {
+    terminal: { cols: 80, rows: 24 }
   });
 
-  process.output.pipeTo(
-    new WritableStream({
-      write(chunk) {
-        onOutput(chunk);
-      }
-    })
-  );
+  const input = process.input.getWriter();
 
-  const exitCode = await process.exit;
-  await persistSectionWorkspace(manifest);
-  return exitCode;
+  const handle: InteractiveShellHandle = {
+    process,
+    input,
+    output: process.output,
+    resize(cols, rows) {
+      process.resize({ cols, rows });
+    },
+    async dispose() {
+      try {
+        await input.close();
+      } catch {}
+      try {
+        process.kill();
+      } catch {}
+    }
+  };
+
+  void process.exit.finally(() => {
+    if (activeShell === handle) {
+      activeShell = null;
+      activeShellSectionId = null;
+    }
+  });
+
+  activeShell = handle;
+  activeShellSectionId = sectionId;
+  return handle;
+}
+
+export async function ensureInteractiveShell(sectionId: string) {
+  if (activeShell && activeShellSectionId === sectionId) {
+    return activeShell;
+  }
+
+  if (activeShell) {
+    await activeShell.dispose();
+    activeShell = null;
+    activeShellSectionId = null;
+  }
+
+  return spawnShell(sectionId);
+}
+
+export async function teardownInteractiveShell() {
+  if (!activeShell) return;
+  const handle = activeShell;
+  activeShell = null;
+  activeShellSectionId = null;
+  await handle.dispose();
 }
