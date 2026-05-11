@@ -52,6 +52,7 @@ export function RunnableCodeBlock({
 }: RunnableCodeBlockProps) {
   const { runCommand, openFile } = usePlayground();
   const { sectionId } = usePlaygroundSection();
+  const flightSourceId = `${sectionId}:${blockId}:${actionKind}`;
 
   function handleAction() {
     if (actionKind === 'command') {
@@ -68,6 +69,7 @@ export function RunnableCodeBlock({
         <button
           type="button"
           className="ha-runnable-block-action"
+          data-playground-flight-source={flightSourceId}
           onClick={handleAction}
         >
           <ActionIcon kind={actionKind} />

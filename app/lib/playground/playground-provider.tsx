@@ -10,6 +10,10 @@ import React, {
   useState,
   type ReactNode
 } from 'react';
+import {
+  clearQueuedPlaygroundFlight,
+  queuePlaygroundFlight
+} from '../motion/playground-flight';
 import type { PlaygroundDrawerProps } from './playground-drawer';
 import { getPlaygroundManifest } from './manifest-loader';
 import type { PlaygroundManifest } from './manifest-schema';
@@ -102,6 +106,7 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
   function startOpenRequest(sectionId: string) {
     const requestId = activeRequestIdRef.current + 1;
     activeRequestIdRef.current = requestId;
+    clearQueuedPlaygroundFlight();
     resetDrawerState(sectionId);
     return requestId;
   }
@@ -237,6 +242,17 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
       const targetAnchor =
         fileBlock && fileBlock.type === 'file-snippet' ? fileBlock.anchor : null;
 
+      if (mode === 'project') {
+        clearQueuedPlaygroundFlight();
+      } else if (blockId) {
+        queuePlaygroundFlight({
+          sourceId: `${sectionId}:${blockId}:${mode === 'command' ? 'command' : 'file'}`,
+          targetId: targetPath
+        });
+      } else {
+        clearQueuedPlaygroundFlight();
+      }
+
       const didLoadFile = await loadFile(
         targetPath,
         targetAnchor,
@@ -311,6 +327,7 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
 
   function closeDrawer() {
     activeRequestIdRef.current += 1;
+    clearQueuedPlaygroundFlight();
     void teardownInteractiveShell();
     setDrawerPhase((current) => {
       if (current === 'closed') {

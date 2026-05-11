@@ -1751,6 +1751,42 @@ html.dark .mermaid .node path {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.ha-playground-editor-target {
+  height: 100%;
+}
+
+.ha-playground-flight-clone {
+  z-index: 2147483646;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+  transition: transform var(--ha-motion-duration-lg)
+      var(--ha-motion-ease-standard),
+    opacity var(--ha-motion-duration-md) var(--ha-motion-ease-standard);
+  will-change: transform, opacity;
+}
+
+.ha-playground-editor-highlight {
+  background: linear-gradient(
+    90deg,
+    var(--ha-motion-highlight-apply) 0%,
+    rgba(242, 128, 28, 0.04) 100%
+  );
+  animation: ha-playground-editor-highlight-fade
+    calc(var(--ha-motion-duration-xl) * 1.25) var(--ha-motion-ease-standard);
+}
+
+@keyframes ha-playground-editor-highlight-fade {
+  0% {
+    box-shadow: inset 3px 0 0 rgba(242, 128, 28, 0.9);
+    filter: saturate(1.15);
+  }
+  100% {
+    box-shadow: inset 3px 0 0 rgba(242, 128, 28, 0);
+    filter: saturate(1);
+  }
+}
+
 .ha-playground-output-shell {
   min-height: 0;
   display: grid;
@@ -1940,9 +1976,12 @@ html.dark .mermaid .node path {
 
 @media (prefers-reduced-motion: reduce) {
   .ha-playground-status,
-  .ha-playground-boot-stage {
+  .ha-playground-boot-stage,
+  .ha-playground-flight-clone,
+  .ha-playground-editor-highlight {
     transition: none;
     transform: none;
+    animation: none;
   }
 }
 
@@ -2251,17 +2290,17 @@ html.dark .mermaid .node path {
   flex: 0 0 auto;
 }
 
-.ha-runnable-block .nextra-code pre button[title='Copy code'],
 .ha-runnable-block .nextra-code pre button[title='Toggle word wrap'],
-.ha-runnable-block .nextra-code > div button[title='Copy code'] {
+.ha-runnable-block .nextra-code pre .ha-copy-feedback-button,
+.ha-runnable-block .nextra-code > div .ha-copy-feedback-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   height: 28px;
-  width: 28px;
   min-height: 28px;
   min-width: 28px;
-  padding: 0 !important;
+  padding-inline: 10px !important;
+  padding-block: 0 !important;
   border-radius: 8px;
   border: 1px solid transparent !important;
   background: rgba(18, 20, 26, 0.72) !important;
@@ -2270,24 +2309,31 @@ html.dark .mermaid .node path {
   backdrop-filter: blur(10px);
 }
 
-.ha-runnable-block .nextra-code pre button[title='Copy code'] svg,
 .ha-runnable-block .nextra-code pre button[title='Toggle word wrap'] svg,
-.ha-runnable-block .nextra-code > div button[title='Copy code'] svg {
+.ha-runnable-block .nextra-code pre .ha-copy-feedback-button svg,
+.ha-runnable-block .nextra-code > div .ha-copy-feedback-button svg {
   width: 12px;
   height: 12px;
 }
 
-.ha-runnable-block .nextra-code pre button[title='Copy code']:hover,
 .ha-runnable-block .nextra-code pre button[title='Toggle word wrap']:hover,
-.ha-runnable-block .nextra-code > div button[title='Copy code']:hover {
+.ha-runnable-block .nextra-code pre .ha-copy-feedback-button:hover,
+.ha-runnable-block .nextra-code > div .ha-copy-feedback-button:hover {
   border-color: rgba(255, 255, 255, 0.16) !important;
   background: rgba(27, 31, 40, 0.92) !important;
   color: #fff !important;
 }
 
 .nextra-code .ha-copy-feedback-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 28px;
+  min-height: 28px;
   white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
   transition: background-color var(--ha-motion-duration-sm)
       var(--ha-motion-ease-standard),
     border-color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
@@ -2300,6 +2346,14 @@ html.dark .mermaid .node path {
   border-color: rgba(52, 168, 83, 0.34) !important;
   background: rgba(52, 168, 83, 0.18) !important;
   color: #c7ffd6 !important;
+}
+
+.nextra-code .ha-copy-feedback-button[data-copy-state='error'] {
+  min-width: auto;
+  padding-inline: 10px !important;
+  border-color: rgba(255, 157, 122, 0.24) !important;
+  background: rgba(255, 157, 122, 0.14) !important;
+  color: #ffd8ca !important;
 }
 
 .nextra-code .ha-copy-feedback-label {
@@ -2340,18 +2394,18 @@ html:not(.dark) .ha-runnable-block-action:hover {
   background: #ffffff;
 }
 
-html:not(.dark) .ha-runnable-block .nextra-code pre button[title='Copy code'],
 html:not(.dark) .ha-runnable-block .nextra-code pre button[title='Toggle word wrap'],
-html:not(.dark) .ha-runnable-block .nextra-code > div button[title='Copy code'] {
+html:not(.dark) .ha-runnable-block .nextra-code pre .ha-copy-feedback-button,
+html:not(.dark) .ha-runnable-block .nextra-code > div .ha-copy-feedback-button {
   background: rgba(255, 255, 255, 0.92) !important;
   color: rgba(15, 23, 42, 0.72) !important;
   border-color: rgba(15, 23, 42, 0.1) !important;
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
 }
 
-html:not(.dark) .ha-runnable-block .nextra-code pre button[title='Copy code']:hover,
 html:not(.dark) .ha-runnable-block .nextra-code pre button[title='Toggle word wrap']:hover,
-html:not(.dark) .ha-runnable-block .nextra-code > div button[title='Copy code']:hover {
+html:not(.dark) .ha-runnable-block .nextra-code pre .ha-copy-feedback-button:hover,
+html:not(.dark) .ha-runnable-block .nextra-code > div .ha-copy-feedback-button:hover {
   background: #ffffff !important;
   color: #0f172a !important;
   border-color: rgba(15, 23, 42, 0.2) !important;
@@ -2361,6 +2415,18 @@ html:not(.dark) .nextra-code .ha-copy-feedback-button[data-copy-state='copied'] 
   border-color: rgba(22, 163, 74, 0.24) !important;
   background: rgba(22, 163, 74, 0.12) !important;
   color: #166534 !important;
+}
+
+html:not(.dark) .nextra-code .ha-copy-feedback-button[data-copy-state='error'] {
+  border-color: rgba(196, 69, 43, 0.22) !important;
+  background: rgba(196, 69, 43, 0.1) !important;
+  color: #9f2d1e !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nextra-code .ha-copy-feedback-button {
+    transition: none;
+  }
 }
 
 @media (max-width: 1023px) {
