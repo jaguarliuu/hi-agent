@@ -9,6 +9,26 @@
   --ha-accent-soft: rgba(232, 93, 47, 0.08);
   --ha-accent-glow: rgba(232, 93, 47, 0.22);
   --ha-grid: rgba(0, 0, 0, 0.05);
+
+  /* -----------------------------------------------------------------
+   * Motion tokens (Wave 0 of site-motion-v1)
+   * Source of truth: docs/superpowers/specs/2026-05-11-site-motion-design.md
+   * Components MUST consume these instead of hard-coding durations
+   * or easings. Keep this list small; expand only via spec update.
+   * ----------------------------------------------------------------- */
+  --ha-motion-duration-xs: 100ms;
+  --ha-motion-duration-sm: 180ms;
+  --ha-motion-duration-md: 240ms;
+  --ha-motion-duration-lg: 320ms;
+  --ha-motion-duration-xl: 480ms;
+
+  --ha-motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ha-motion-ease-decelerate: cubic-bezier(0, 0, 0, 1);
+  --ha-motion-ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+
+  /* Highlight color used for "code applied to playground" pulse.
+   * Light theme tone; dark theme overrides below. */
+  --ha-motion-highlight-apply: rgba(242, 128, 28, 0.16);
 }
 
 html.dark {
@@ -22,6 +42,9 @@ html.dark {
   --ha-accent-soft: rgba(255, 122, 76, 0.12);
   --ha-accent-glow: rgba(255, 122, 76, 0.28);
   --ha-grid: rgba(255, 255, 255, 0.05);
+
+  /* Brighter apply-highlight so it stays visible on dark surfaces. */
+  --ha-motion-highlight-apply: rgba(255, 154, 72, 0.22);
 }
 
 html {
@@ -2064,5 +2087,51 @@ html:not(.dark) .ha-runnable-block .nextra-code > div button[title='Copy code']:
 @media (max-width: 1023px) {
   .ha-open-project-button {
     display: none;
+  }
+}
+
+/* =====================================================================
+ * Motion accessibility contract (Wave 0 of site-motion-v1)
+ * Source: docs/superpowers/specs/2026-05-11-site-motion-design.md § P4
+ *
+ * When the user requests reduced motion at the OS level we:
+ *   1. Collapse every motion-token duration to a near-instant value
+ *      (0.01ms, not 0ms — so transitionend still fires, which
+ *      animation-completion handlers in the drawer rely on).
+ *   2. Neutralize any rogue transition / animation that does not
+ *      consume our tokens (third-party styles, inline animations).
+ *   3. Preserve end-state and all non-motion feedback (color swaps,
+ *      text changes, focus rings) — exactly what P4 promises.
+ *
+ * Deliberately excluded from the nuke:
+ *   - Live terminal UI (.xterm.*): cursor blink is a functional
+ *     signal, not decoration.
+ *   - Monaco editor internals (.monaco-editor .*): its scroll and
+ *     cursor animations are part of the editor UX.
+ * ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ha-motion-duration-xs: 0.01ms;
+    --ha-motion-duration-sm: 0.01ms;
+    --ha-motion-duration-md: 0.01ms;
+    --ha-motion-duration-lg: 0.01ms;
+    --ha-motion-duration-xl: 0.01ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .xterm,
+  .xterm *,
+  .monaco-editor,
+  .monaco-editor * {
+    animation-duration: revert !important;
+    transition-duration: revert !important;
   }
 }
