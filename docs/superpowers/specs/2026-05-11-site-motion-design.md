@@ -104,11 +104,63 @@ only when the value must differ per theme.
 --ha-motion-ease-decelerate: cubic-bezier(0, 0, 0, 1);
 --ha-motion-ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
 
+--ha-motion-distance-sm: 8px;   /* subtle nudge: hover lift, micro-shake */
+--ha-motion-distance-md: 16px;  /* standard slide-in / fade-rise */
+--ha-motion-distance-lg: 40px;  /* drawer / modal off-screen start */
+
+--ha-motion-stagger-step: 40ms; /* multiply by index for sequenced reveals */
+
 --ha-motion-highlight-apply: rgba(242, 128, 28, 0.16); /* code-apply flash */
 ```
 
-Components consume only these tokens. Hard-coded `200ms ease` in a component
-file is a review-time warning.
+Components consume only these tokens. Hard-coded `200ms ease`, literal
+`translateX(40px)`, or ad-hoc stagger delays in a component file are
+review-time warnings. If a new value is genuinely needed, extend the
+token set here first and cite this spec in the PR.
+
+### Debug Slowdown (dev-only)
+
+Reviewing a 240ms curve with the naked eye is impractical. The
+`useMotionDebug()` hook (`app/lib/motion/use-motion-debug.ts`) listens for
+
+- `?motion-debug=1` in the URL (shareable in Slack/screenshots), or
+- `localStorage.HA_MOTION_DEBUG === '1'` (persistent across navigations).
+
+When active, it sets `<html data-motion-debug="slow">`. A companion CSS
+rule in `globals.css` multiplies every `--ha-motion-duration-*` token by
+~4 so standard (240ms) → 960ms, extended (480ms) → 1920ms, etc.
+
+Hard rules:
+
+1. **A11y outranks debug.** If `prefers-reduced-motion: reduce` matches,
+   the attribute is never injected and the CSS rule is additionally
+   guarded by `@media not (prefers-reduced-motion: reduce)`.
+2. **Only durations scale.** Easings and distances must not — otherwise
+   reviewers would be evaluating the wrong motion.
+3. **Dev-only by convention.** The hook will ship in production builds
+   (removing it from the production bundle would add build complexity)
+   but requires the explicit opt-in above, so it costs ~0 to users.
+
+### Runtime Wiring
+
+`<MotionProvider>` (`app/lib/motion/motion-context.tsx`) wraps the entire
+`<Layout>` tree from `app/layout.jsx`. It owns:
+
+- a single `matchMedia('(prefers-reduced-motion: reduce)')` subscription
+  that backs `useMotion().reduced` for every descendant,
+- the `useMotionDebug()` invocation that writes/clears the
+  `data-motion-debug` attribute on `<html>`.
+
+Two read APIs co-exist deliberately:
+
+| API | Use when |
+|---|---|
+| `useMotion()` (Context) | Inside the app tree. Preferred. Returns `{ reduced, debug }`. |
+| `useReducedMotion()` (hook) | Leaf components / tests that must not depend on Context, or anything mounted outside `<MotionProvider>`. |
+
+Both return the SSR-safe default `false` until the first client effect
+runs. Tests can wrap a subject with `<MotionProvider value={{ reduced: true }}>`
+to drive the reduced branch deterministically without mocking matchMedia.
 
 ## Scene Catalog
 
@@ -253,3 +305,4 @@ See `plans/2026-05-11-site-motion-v1.md` for the checkbox tasks.
 |---|---|
 | 2026-05-11 | Initial draft covering 5 scenes, 3 waves, token system |
 | 2026-05-11 | Wave 0 landed: motion tokens + prefers-reduced-motion global block + useReducedMotion hook; resolved Framer Motion open question (not adopted in V1) |
+| 2026-05-11 | Wave 0.5 landed: distance + stagger tokens, dev-only debug slowdown, `<MotionProvider>` Context with paired `useMotion()` API, shared `tests/helpers/motion-test-utils.ts` |

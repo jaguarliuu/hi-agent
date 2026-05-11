@@ -130,6 +130,34 @@ Out of scope:
 
 ---
 
+## Wave 0.5 · Foundation Reinforcement
+
+Completed as a follow-up the same day as Wave 0, addressing gaps the
+first pass exposed before Wave 1 work could safely begin.
+
+- [x] **Step 0.5** — Extend motion tokens: add `--ha-motion-distance-{sm,md,lg}` and `--ha-motion-stagger-step` to `:root`; update spec's Motion Token System section to codify "no literal px / delays in components".
+  - **Landed 2026-05-11.** Distance tokens live beside durations/easings; spec explicitly bans ad-hoc `translateX(40px)` or hand-tuned stagger delays in component code.
+
+- [x] **Step 0.6** — Dev-only `?motion-debug=1` slowdown.
+  - Ship `app/lib/motion/use-motion-debug.ts` that reads URL / localStorage and toggles `<html data-motion-debug="slow">`.
+  - Ship a `@media not (prefers-reduced-motion: reduce)` CSS block that multiplies every duration token by 4.
+  - Document the A11y-wins ordering in the spec.
+  - **Landed 2026-05-11.** Hook short-circuits to `false` whenever `prefers-reduced-motion: reduce` matches, guaranteeing a11y outranks debug twice (runtime + CSS). Spec's new Debug Slowdown subsection captures the contract.
+
+- [x] **Step 0.7** — `<MotionProvider>` Context shared across the app.
+  - Wrap the root `<Layout>` with the provider so all descendants share one `matchMedia` subscription.
+  - Expose `useMotion()` returning `{ reduced, debug }`; keep standalone `useReducedMotion()` as the no-Context escape hatch.
+  - Spec documents the two-API coexistence and the `value` prop for deterministic tests.
+  - **Landed 2026-05-11.** Provider owns the single matchMedia subscription and invokes `useMotionDebug()` on the client. Default Context value is `{ reduced: false, debug: false }` so components consumed outside the provider still render deterministically.
+
+- [x] **Step 0.8** — Test helpers at `tests/helpers/motion-test-utils.ts`.
+  - Export `createFakeMediaQueryList`, `installReducedMotionMock`, `withReducedMotion`, `flushTransition`.
+  - Refactor `tests/unit/use-reduced-motion.test.ts` to consume the helper (no behavior change, zero duplication).
+  - Self-test the helper in `tests/unit/motion-test-utils.test.tsx`, including MotionProvider integration (single subscription propagates to N consumers; `value` override; outside-Provider defaults).
+  - **Landed 2026-05-11.** `npm run test` → 11 files / 38 tests passing (29 existing + 9 new helper tests). `GetDiagnostics` clean.
+
+---
+
 ## Wave 1 · Foundation & Must-Have Feedback
 
 Theme: feedback fidelity. Without these, the site feels dead.
@@ -261,3 +289,4 @@ Each wave is committed independently. To roll back:
 |---|---|
 | 2026-05-11 | Initial plan, three waves, 30 steps |
 | 2026-05-11 | Wave 0 completed — tokens + reduced-motion hook + Framer Motion decision |
+| 2026-05-11 | Wave 0.5 completed — distance/stagger tokens, motion-debug slowdown, MotionProvider Context, motion-test-utils helpers |

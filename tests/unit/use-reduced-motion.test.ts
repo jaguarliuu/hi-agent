@@ -1,65 +1,24 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useReducedMotion } from '@/app/lib/motion/use-reduced-motion';
-
-interface FakeMediaQueryList {
-  matches: boolean;
-  media: string;
-  listeners: Set<(event: MediaQueryListEvent) => void>;
-  addEventListener: (
-    type: 'change',
-    cb: (event: MediaQueryListEvent) => void
-  ) => void;
-  removeEventListener: (
-    type: 'change',
-    cb: (event: MediaQueryListEvent) => void
-  ) => void;
-  dispatch: (matches: boolean) => void;
-}
-
-function createFakeMediaQueryList(initialMatches: boolean): FakeMediaQueryList {
-  const listeners = new Set<(event: MediaQueryListEvent) => void>();
-  const fake: FakeMediaQueryList = {
-    matches: initialMatches,
-    media: '(prefers-reduced-motion: reduce)',
-    listeners,
-    addEventListener: (_type, cb) => {
-      listeners.add(cb);
-    },
-    removeEventListener: (_type, cb) => {
-      listeners.delete(cb);
-    },
-    dispatch: (matches) => {
-      fake.matches = matches;
-      listeners.forEach((cb) =>
-        cb({ matches } as unknown as MediaQueryListEvent)
-      );
-    }
-  };
-  return fake;
-}
+import {
+  installReducedMotionMock,
+  type ReducedMotionMock,
+} from '../helpers/motion-test-utils';
 
 describe('useReducedMotion', () => {
-  let mediaQuery: FakeMediaQueryList;
-  let originalMatchMedia: typeof window.matchMedia | undefined;
+  let mock: ReducedMotionMock;
 
   beforeEach(() => {
-    originalMatchMedia = window.matchMedia;
-    mediaQuery = createFakeMediaQueryList(false);
-    window.matchMedia = vi.fn().mockReturnValue(mediaQuery) as unknown as typeof window.matchMedia;
+    mock = installReducedMotionMock(false);
   });
 
   afterEach(() => {
-    if (originalMatchMedia) {
-      window.matchMedia = originalMatchMedia;
-    } else {
-      // @ts-expect-error - cleanup test artifact
-      delete window.matchMedia;
-    }
+    mock.restore();
   });
 
   it('reflects an initially-true matchMedia after the mount effect runs', () => {
-    mediaQuery.matches = true;
+    mock.mediaQuery.matches = true;
     const { result } = renderHook(() => useReducedMotion());
 
     expect(result.current).toBe(true);
@@ -76,12 +35,12 @@ describe('useReducedMotion', () => {
     expect(result.current).toBe(false);
 
     act(() => {
-      mediaQuery.dispatch(true);
+      mock.mediaQuery.dispatch(true);
     });
     expect(result.current).toBe(true);
 
     act(() => {
-      mediaQuery.dispatch(false);
+      mock.mediaQuery.dispatch(false);
     });
     expect(result.current).toBe(false);
   });
@@ -89,12 +48,13 @@ describe('useReducedMotion', () => {
   it('cleans up its listener on unmount', () => {
     const { unmount } = renderHook(() => useReducedMotion());
 
-    expect(mediaQuery.listeners.size).toBe(1);
+    expect(mock.mediaQuery.listeners.size).toBe(1);
     unmount();
-    expect(mediaQuery.listeners.size).toBe(0);
+    expect(mock.mediaQuery.listeners.size).toBe(0);
   });
 
   it('does not throw when window.matchMedia is unavailable', () => {
+    mock.restore();
     // @ts-expect-error - simulate hostile environment
     delete window.matchMedia;
 

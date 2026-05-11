@@ -26,6 +26,15 @@
   --ha-motion-ease-decelerate: cubic-bezier(0, 0, 0, 1);
   --ha-motion-ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
 
+  /* Spatial vocabulary: how far things travel.
+   * Pair with duration tokens — never invent literal pixel values. */
+  --ha-motion-distance-sm: 8px;
+  --ha-motion-distance-md: 16px;
+  --ha-motion-distance-lg: 40px;
+
+  /* Stagger step for sequenced lists / grids. Multiply by index. */
+  --ha-motion-stagger-step: 40ms;
+
   /* Highlight color used for "code applied to playground" pulse.
    * Light theme tone; dark theme overrides below. */
   --ha-motion-highlight-apply: rgba(242, 128, 28, 0.16);
@@ -2133,5 +2142,31 @@ html:not(.dark) .ha-runnable-block .nextra-code > div button[title='Copy code']:
   .monaco-editor * {
     animation-duration: revert !important;
     transition-duration: revert !important;
+  }
+}
+
+/* =====================================================================
+ *  Motion Debug Slowdown (dev-only)
+ *  ---------------------------------------------------------------------
+ *  Activated by `useMotionDebug()` when the URL carries ?motion-debug=1
+ *  or localStorage.HA_MOTION_DEBUG === '1'. Multiplies every duration
+ *  token by 4 so curves become visible to the naked eye during review.
+ *
+ *  Intentionally re-scales only durations; easings and distances stay
+ *  as-is — otherwise you'd review the wrong motion.
+ *
+ *  A11y wins: if the user has prefers-reduced-motion, the attribute is
+ *  intentionally NOT injected by the hook (see use-motion-debug.ts).
+ *  The rule below is wrapped in a `not (reduce)` media query as a
+ *  belt-and-braces guarantee so even a stale attribute from a previous
+ *  tab can never override the a11y collapse.
+ * ===================================================================== */
+@media not (prefers-reduced-motion: reduce) {
+  :root[data-motion-debug='slow'] {
+    --ha-motion-duration-xs: 400ms;
+    --ha-motion-duration-sm: 720ms;
+    --ha-motion-duration-md: 960ms;
+    --ha-motion-duration-lg: 1280ms;
+    --ha-motion-duration-xl: 1920ms;
   }
 }

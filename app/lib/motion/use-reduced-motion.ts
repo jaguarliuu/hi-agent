@@ -16,6 +16,15 @@ import { useEffect, useState } from 'react';
  * either skip the animation or shorten it to its end-state. CSS-driven
  * motion does not need this hook because the global media-query block
  * in globals.css already neutralizes durations.
+ *
+ * Relationship to `useMotion()` (`./motion-context.tsx`):
+ *   - `useMotion()` is the preferred reader inside the `<MotionProvider>`
+ *     tree. It exposes both `reduced` and `debug` and reuses a single
+ *     matchMedia subscription across the whole site.
+ *   - `useReducedMotion()` stays as a dependency-free escape hatch for
+ *     leaf components / tests that intentionally do not want to depend
+ *     on the Context. The two implementations are kept behaviorally
+ *     equivalent for the `reduced` signal.
  */
 export function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
