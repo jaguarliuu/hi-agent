@@ -1,0 +1,58 @@
+# Caddyfile for hi-agent docs (static export + WebContainers)
+#
+# Listens on :80 inside the container; terminate HTTPS at the
+# upstream proxy / load balancer (or replace ":80" with your
+# domain to let Caddy obtain certificates automatically).
+
+{
+	# Disable the admin API; we don't need it inside the container.
+	admin off
+	# Quieter logs by default; tune as needed.
+	persist_config off
+}
+
+:80 {
+	root * /srv
+	encode zstd gzip
+
+	# --- WebContainers requirements ---------------------------------
+	# COOP/COEP are mandatory for `crossOriginIsolated`, which in turn
+	# is required for SharedArrayBuffer / WebContainer boot.
+	header {
+		Cross-Origin-Embedder-Policy "require-corp"
+		Cross-Origin-Opener-Policy   "same-origin"
+		Cross-Origin-Resource-Policy "cross-origin"
+
+		# Hardening
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy        "strict-origin-when-cross-origin"
+
+		# Static assets are immutable (Next.js fingerprints them).
+		?Cache-Control "public, max-age=300"
+	}
+
+	@hashedAssets path /_next/static/* /_pagefind/*
+	header @hashedAssets Cache-Control "public, max-age=31536000, immutable"
+
+	# Pagefind ships small WASM/JSON shards; make sure they're served
+	# with sensible MIME types.
+	@wasm path *.wasm
+	header @wasm Content-Type "application/wasm"
+
+	# --- Static export routing --------------------------------------
+	# Next.js export with `trailingSlash: true` emits `out/<route>/index.html`.
+	# Resolve in this order:
+	#   1. exact file (e.g. /favicon.ico, /_next/static/...)
+	#   2. <path>/index.html (canonical doc routes)
+	#   3. <path>.html       (top-level pages without trailing slash)
+	#   4. fallback to /404.html
+	try_files {path} {path}/index.html {path}.html /404.html
+
+	file_server
+
+	handle_errors {
+		@notFound expression {http.error.status_code} == 404
+		rewrite @notFound /404.html
+		file_server
+	}
+}
