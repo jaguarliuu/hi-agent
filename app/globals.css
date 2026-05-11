@@ -231,6 +231,10 @@ body,
   position: absolute;
   width: 14px;
   height: 14px;
+  /* Icons are purely decorative; let click events fall through to the
+   * button. Without this the hidden-but-still-layered sibling icon
+   * (opacity: 0) catches the pointer and the toggle feels dead. */
+  pointer-events: none;
   transition: transform var(--ha-motion-duration-md)
       var(--ha-motion-ease-standard),
     opacity var(--ha-motion-duration-md) var(--ha-motion-ease-standard);
