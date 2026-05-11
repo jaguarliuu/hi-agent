@@ -317,6 +317,168 @@ html:not(.dark)::view-transition-new(root) {
 }
 
 /* ============================================================
+ *  Route / navigation / search polish
+ * ============================================================ */
+
+.ha-route-shell {
+  position: relative;
+  min-width: 0;
+}
+
+.ha-route-shell[data-ha-view-transitions='supported'] .ha-route-shell__stage {
+  view-transition-name: ha-route-shell;
+}
+
+.ha-route-shell__stage {
+  min-width: 0;
+  animation: ha-route-shell-enter var(--ha-motion-duration-md)
+    var(--ha-motion-ease-standard) both;
+  will-change: transform, opacity;
+}
+
+@keyframes ha-route-shell-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--ha-motion-distance-sm));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nextra-sidebar li > :is(a, button),
+.x\:sticky .nextra-scrollbar a[href^='#'] {
+  position: relative;
+  transition:
+    transform var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    opacity var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard);
+}
+
+.nextra-sidebar li > :is(a, button)::before,
+.x\:sticky .nextra-scrollbar a[href^='#']::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -10px;
+  width: 3px;
+  height: 65%;
+  border-radius: 999px;
+  background: var(--ha-accent);
+  opacity: 0;
+  transform: translateY(-50%) scaleY(0.35);
+  transform-origin: center;
+  transition:
+    transform var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    opacity var(--ha-motion-duration-sm) var(--ha-motion-ease-standard);
+}
+
+.nextra-sidebar li.active > :is(a, button) {
+  transform: translateX(4px);
+}
+
+.nextra-sidebar li.active > :is(a, button)::before {
+  opacity: 1;
+  transform: translateY(-50%) scaleY(1);
+}
+
+.x\:sticky .nextra-scrollbar a[href^='#'][data-ha-toc-active='true'] {
+  transform: translateX(4px);
+}
+
+.x\:sticky .nextra-scrollbar a[href^='#'][data-ha-toc-active='true']::before {
+  opacity: 1;
+  transform: translateY(-50%) scaleY(1);
+}
+
+.nextra-search-results {
+  transform-origin: top center;
+  transition:
+    opacity var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    transform var(--ha-motion-duration-sm) var(--ha-motion-ease-standard);
+}
+
+.nextra-search-results[data-enter] {
+  animation: ha-search-results-panel var(--ha-motion-duration-sm)
+    var(--ha-motion-ease-standard) both;
+}
+
+.nextra-search-results[data-enter] :is(li, [role='option']) {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: ha-search-result-enter var(--ha-motion-duration-sm)
+    var(--ha-motion-ease-standard) both;
+}
+
+.nextra-search-results[data-enter] :is(li, [role='option']):nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.nextra-search-results[data-enter] :is(li, [role='option']):nth-child(2) {
+  animation-delay: var(--ha-motion-stagger-step);
+}
+
+.nextra-search-results[data-enter] :is(li, [role='option']):nth-child(3) {
+  animation-delay: calc(var(--ha-motion-stagger-step) * 2);
+}
+
+.nextra-search-results[data-enter] :is(li, [role='option']):nth-child(4) {
+  animation-delay: calc(var(--ha-motion-stagger-step) * 3);
+}
+
+.nextra-search-results[data-enter] :is(li, [role='option']):nth-child(5) {
+  animation-delay: calc(var(--ha-motion-stagger-step) * 4);
+}
+
+.nextra-search-results[data-enter] :is(li, [role='option']):nth-child(n + 6) {
+  animation-delay: calc(var(--ha-motion-stagger-step) * 5);
+}
+
+@keyframes ha-search-results-panel {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ha-search-result-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ha-route-shell__stage,
+  .nextra-search-results[data-enter],
+  .nextra-search-results[data-enter] :is(li, [role='option']) {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    will-change: auto;
+  }
+
+  .nextra-sidebar li > :is(a, button),
+  .x\:sticky .nextra-scrollbar a[href^='#'] {
+    transition-duration: 0.01ms;
+  }
+
+  .nextra-sidebar li.active > :is(a, button),
+  .x\:sticky .nextra-scrollbar a[href^='#'][data-ha-toc-active='true'] {
+    transform: none;
+  }
+}
+
+/* ============================================================
  *  Landing Hero
  * ============================================================ */
 

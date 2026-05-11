@@ -5,6 +5,7 @@ import 'nextra-theme-docs/style.css'
 import './globals.css'
 import { ThemeSwitchRelocator } from './theme-switch-relocator'
 import { MotionProvider } from './lib/motion/motion-context'
+import { RouteMotionShell } from './lib/motion/route-motion-shell'
 import { ThemeTransitionToggle } from './lib/motion/theme-transition-toggle'
 
 export const metadata = {
@@ -73,7 +74,6 @@ export default async function RootLayout({ children }) {
       <body>
         <ThemeSwitchRelocator />
         <MotionProvider>
-          <ThemeTransitionToggle />
           <Layout
             banner={banner}
             navbar={navbar}
@@ -86,7 +86,8 @@ export default async function RootLayout({ children }) {
             sidebar={{ defaultMenuCollapseLevel: 1, toggleButton: true }}
             toc={{ backToTop: '回到顶部' }}
           >
-            {children}
+            <ThemeTransitionToggle />
+            <RouteMotionShell>{children}</RouteMotionShell>
           </Layout>
         </MotionProvider>
       </body>
