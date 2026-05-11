@@ -1303,6 +1303,16 @@ html.dark .mermaid .node path {
  *  Runnable playground drawer
  * ============================================================ */
 
+.ha-playground-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 10, 18, 0.48);
+  opacity: 0;
+  transition: opacity var(--ha-motion-duration-md)
+    var(--ha-motion-ease-standard);
+  z-index: 69;
+}
+
 .ha-playground {
   position: fixed;
   inset: 0 0 0 auto;
@@ -1314,13 +1324,29 @@ html.dark .mermaid .node path {
   background: #1e1e1e;
   border-left: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: -28px 0 60px rgba(0, 0, 0, 0.32);
-  transform: translateX(100%);
-  transition: transform 0.24s ease;
+  transform: translateX(calc(100% + var(--ha-motion-distance-md)));
+  transition: transform var(--ha-motion-duration-lg)
+    var(--ha-motion-ease-standard);
+  will-change: transform;
   z-index: 70;
 }
 
-.ha-playground.is-open {
+.ha-playground[data-drawer-phase='opening'][data-drawer-transition='active'],
+.ha-playground[data-drawer-phase='open'] {
   transform: translateX(0);
+}
+
+.ha-playground[data-drawer-phase='closing'] {
+  transform: translateX(calc(100% + var(--ha-motion-distance-md)));
+}
+
+.ha-playground-backdrop[data-drawer-phase='opening'][data-drawer-transition='active'],
+.ha-playground-backdrop[data-drawer-phase='open'] {
+  opacity: 1;
+}
+
+.ha-playground-backdrop[data-drawer-phase='closing'] {
+  opacity: 0;
 }
 
 .ha-playground-header {
@@ -1369,6 +1395,13 @@ html.dark .mermaid .node path {
   gap: 10px;
 }
 
+.ha-playground-status-cluster {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
 .ha-playground-status {
   display: inline-flex;
   align-items: center;
@@ -1385,7 +1418,18 @@ html.dark .mermaid .node path {
   transition: background-color var(--ha-motion-duration-sm)
       var(--ha-motion-ease-standard),
     color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
-    border-color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard);
+    border-color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    opacity var(--ha-motion-duration-sm) var(--ha-motion-ease-standard);
+}
+
+.ha-playground-status-cluster[data-boot-stage='prelude'] .ha-playground-status,
+.ha-playground-status-cluster[data-boot-stage='loading-kernel']
+  .ha-playground-status,
+.ha-playground-status-cluster[data-boot-stage='mounting-snapshot']
+  .ha-playground-status,
+.ha-playground-status-cluster[data-boot-stage='starting-shell']
+  .ha-playground-status {
+  opacity: 0.88;
 }
 
 .ha-playground-status.status-ready,
@@ -1400,6 +1444,35 @@ html.dark .mermaid .node path {
   color: #ff9d7a;
   border-color: rgba(255, 157, 122, 0.18);
   background: rgba(255, 157, 122, 0.08);
+}
+
+.ha-playground-boot-stage {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.54);
+  opacity: 0.76;
+  transform: translateY(0);
+  transition: color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    opacity var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    transform var(--ha-motion-duration-sm) var(--ha-motion-ease-standard);
+}
+
+.ha-playground-boot-stage[data-boot-stage='prelude'] {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.ha-playground-boot-stage[data-boot-stage='loading-kernel'],
+.ha-playground-boot-stage[data-boot-stage='mounting-snapshot'],
+.ha-playground-boot-stage[data-boot-stage='starting-shell'] {
+  color: rgba(138, 180, 255, 0.76);
+  opacity: 0.9;
+}
+
+.ha-playground-boot-stage[data-boot-stage='ready'] {
+  color: #8ab4ff;
+  opacity: 1;
 }
 
 .ha-playground-close {
@@ -1830,6 +1903,29 @@ html.dark .mermaid .node path {
   background: rgba(196, 69, 43, 0.08);
 }
 
+.ha-playground[data-playground-theme='light'] .ha-playground-boot-stage {
+  color: rgba(15, 23, 42, 0.54);
+}
+
+.ha-playground[data-playground-theme='light']
+  .ha-playground-boot-stage[data-boot-stage='prelude'] {
+  color: rgba(15, 23, 42, 0.62);
+}
+
+.ha-playground[data-playground-theme='light']
+  .ha-playground-boot-stage[data-boot-stage='loading-kernel'],
+.ha-playground[data-playground-theme='light']
+  .ha-playground-boot-stage[data-boot-stage='mounting-snapshot'],
+.ha-playground[data-playground-theme='light']
+  .ha-playground-boot-stage[data-boot-stage='starting-shell'] {
+  color: rgba(29, 111, 216, 0.78);
+}
+
+.ha-playground[data-playground-theme='light']
+  .ha-playground-boot-stage[data-boot-stage='ready'] {
+  color: #1d6fd8;
+}
+
 .ha-playground[data-playground-theme='light'] .ha-playground-close {
   border-color: rgba(15, 23, 42, 0.14);
   background: rgba(15, 23, 42, 0.03);
@@ -1840,6 +1936,14 @@ html.dark .mermaid .node path {
   color: #0f172a;
   border-color: rgba(15, 23, 42, 0.26);
   background: rgba(15, 23, 42, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ha-playground-status,
+  .ha-playground-boot-stage {
+    transition: none;
+    transform: none;
+  }
 }
 
 .ha-playground[data-playground-theme='light'] .ha-playground-activity-rail {
@@ -2181,6 +2285,29 @@ html.dark .mermaid .node path {
   color: #fff !important;
 }
 
+.nextra-code .ha-copy-feedback-button {
+  min-width: 28px;
+  white-space: nowrap;
+  transition: background-color var(--ha-motion-duration-sm)
+      var(--ha-motion-ease-standard),
+    border-color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard);
+}
+
+.nextra-code .ha-copy-feedback-button[data-copy-state='copied'] {
+  min-width: auto;
+  padding-inline: 10px !important;
+  border-color: rgba(52, 168, 83, 0.34) !important;
+  background: rgba(52, 168, 83, 0.18) !important;
+  color: #c7ffd6 !important;
+}
+
+.nextra-code .ha-copy-feedback-label {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
 /* -------------------------------------------------------------------
  * Runnable code block · Light theme overrides
  * 浅色模式下，把文档正文里的 <RunnableCodeBlock> 包裹的代码块从
@@ -2228,6 +2355,12 @@ html:not(.dark) .ha-runnable-block .nextra-code > div button[title='Copy code']:
   background: #ffffff !important;
   color: #0f172a !important;
   border-color: rgba(15, 23, 42, 0.2) !important;
+}
+
+html:not(.dark) .nextra-code .ha-copy-feedback-button[data-copy-state='copied'] {
+  border-color: rgba(22, 163, 74, 0.24) !important;
+  background: rgba(22, 163, 74, 0.12) !important;
+  color: #166534 !important;
 }
 
 @media (max-width: 1023px) {

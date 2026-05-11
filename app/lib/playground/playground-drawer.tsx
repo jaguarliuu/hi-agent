@@ -1,13 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useReducedMotion } from '../motion/use-reduced-motion';
 import { usePlayground } from './playground-provider';
 import { PlaygroundEditor } from './playground-editor';
 import { PlaygroundFileTree } from './playground-file-tree';
 import { PlaygroundTerminal } from './playground-terminal';
 import { usePlaygroundTheme } from './use-playground-theme';
 
-export function PlaygroundDrawer() {
+export interface PlaygroundDrawerProps {
+  phase: 'opening' | 'open' | 'closing';
+  onPhaseComplete: (phase: 'opening' | 'open' | 'closing') => void;
+}
+
+export function PlaygroundDrawer({
+  phase,
+  onPhaseComplete
+}: PlaygroundDrawerProps) {
   const {
     manifest,
     state,
@@ -19,104 +28,210 @@ export function PlaygroundDrawer() {
     updateActiveFile
   } = usePlayground();
   const [terminalVisible, setTerminalVisible] = useState(true);
+  const [isTransitionActive, setIsTransitionActive] = useState(false);
   const theme = usePlaygroundTheme();
+  const reducedMotion = useReducedMotion();
+  const latestPhaseRef = useRef(phase);
+  const latestTransitionActiveRef = useRef(isTransitionActive);
+
+  latestPhaseRef.current = phase;
+  latestTransitionActiveRef.current = isTransitionActive;
+
+  const completePhase = useEffectEvent(
+    (nextPhase: PlaygroundDrawerProps['phase']) => {
+      onPhaseComplete(nextPhase);
+    }
+  );
+
+  useEffect(() => {
+    if (phase === 'open') {
+      setIsTransitionActive(true);
+      return;
+    }
+
+    if (phase === 'opening') {
+      if (reducedMotion) {
+        setIsTransitionActive(true);
+        completePhase('opening');
+        return;
+      }
+
+      setIsTransitionActive(false);
+      const rafId = window.requestAnimationFrame(() => {
+        setIsTransitionActive(true);
+      });
+
+      return () => {
+        window.cancelAnimationFrame(rafId);
+      };
+    }
+
+    const needsImmediateCloseCompletion =
+      reducedMotion || latestTransitionActiveRef.current === false;
+
+    setIsTransitionActive(false);
+
+    if (needsImmediateCloseCompletion) {
+      const timeoutId = window.setTimeout(() => {
+        completePhase('closing');
+      }, 0);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
+    }
+  }, [completePhase, phase, reducedMotion]);
 
   const title = manifest?.title ?? 'Runnable Example';
   const activeTabTitle = state.activeFile?.split('/').at(-1) ?? 'welcome.ts';
+  const transitionState = isTransitionActive ? 'active' : 'idle';
+  const bootStageLabel = getBootStageLabel(state.bootStage);
+
+  function handleTransitionEnd(event: React.TransitionEvent<HTMLElement>) {
+    if (event.target !== event.currentTarget || event.propertyName !== 'transform') {
+      return;
+    }
+
+    const currentPhase = latestPhaseRef.current;
+    if (currentPhase === 'opening' || currentPhase === 'closing') {
+      completePhase(currentPhase);
+    }
+  }
 
   return (
-    <aside
-      className="ha-playground is-open"
-      data-playground-theme={theme}
-      aria-label="Runnable playground"
-    >
-      <header className="ha-playground-header">
-        <div className="ha-playground-brand">
-          <span className="ha-playground-brand-mark">{'</>'}</span>
-          <h2>{title}</h2>
-        </div>
-        <div className="ha-playground-window-actions">
-          <span className={`ha-playground-status status-${state.status}`}>
-            {state.status}
-          </span>
-          <button
-            type="button"
-            className="ha-playground-close"
-            onClick={closeDrawer}
-            aria-label="关闭"
-          >
-            关闭
-          </button>
-        </div>
-      </header>
-
-      <div className="ha-playground-body">
-        <aside className="ha-playground-activity-rail" aria-label="Workbench">
-          <button
-            type="button"
-            className="ha-playground-activity-button is-active"
-            aria-label="资源管理器"
-          >
-            <ExplorerIcon />
-          </button>
-          <button
-            type="button"
-            className={`ha-playground-activity-button ${
-              terminalVisible ? 'is-active' : ''
-            }`}
-            aria-label="终端"
-            aria-pressed={terminalVisible}
-            onClick={() => {
-              setTerminalVisible((current) => !current);
-            }}
-          >
-            <TerminalIcon />
-          </button>
-        </aside>
-
-        <div className="ha-playground-sidebar">
-          <div className="ha-playground-sidebar-header">
-            <span>资源管理器</span>
-            <span className="ha-playground-sidebar-badge">WORKSPACE</span>
+    <>
+      <div
+        className="ha-playground-backdrop"
+        data-playground-backdrop=""
+        data-drawer-phase={phase}
+        data-drawer-transition={transitionState}
+        aria-hidden="true"
+      />
+      <aside
+        className="ha-playground"
+        data-playground-theme={theme}
+        data-drawer-phase={phase}
+        data-drawer-transition={transitionState}
+        aria-label="Runnable playground"
+        onTransitionEnd={handleTransitionEnd}
+      >
+        <header className="ha-playground-header">
+          <div className="ha-playground-brand">
+            <span className="ha-playground-brand-mark">{'</>'}</span>
+            <h2>{title}</h2>
           </div>
-          <PlaygroundFileTree
-            files={files}
-            activeFile={state.activeFile}
-            onSelectFile={selectFile}
-          />
-        </div>
-
-        <div className="ha-playground-main">
-          <div className="ha-playground-editor-pane">
-            <div className="ha-playground-tabs">
-              <button type="button" className="ha-playground-tab is-active">
-                <EditorTabIcon path={state.activeFile} />
-                <span>{activeTabTitle}</span>
-              </button>
-            </div>
+          <div className="ha-playground-window-actions">
             <div
-              className="ha-playground-editor-shell"
-              data-active-file={state.activeFile ?? ''}
+              className="ha-playground-status-cluster"
+              data-boot-stage={state.bootStage}
             >
-              <PlaygroundEditor
-                path={state.activeFile}
-                value={activeFileContent}
-                anchor={activeFileAnchor}
-                onChange={updateActiveFile}
-              />
+              <span className={`ha-playground-status status-${state.status}`}>
+                {state.status}
+              </span>
+              {bootStageLabel ? (
+                <span className="ha-playground-boot-stage" data-boot-stage={state.bootStage}>
+                  {bootStageLabel}
+                </span>
+              ) : null}
             </div>
+            <button
+              type="button"
+              className="ha-playground-close"
+              onClick={closeDrawer}
+              aria-label="关闭"
+            >
+              关闭
+            </button>
+          </div>
+        </header>
+
+        <div className="ha-playground-body">
+          <aside className="ha-playground-activity-rail" aria-label="Workbench">
+            <button
+              type="button"
+              className="ha-playground-activity-button is-active"
+              aria-label="资源管理器"
+            >
+              <ExplorerIcon />
+            </button>
+            <button
+              type="button"
+              className={`ha-playground-activity-button ${
+                terminalVisible ? 'is-active' : ''
+              }`}
+              aria-label="终端"
+              aria-pressed={terminalVisible}
+              onClick={() => {
+                setTerminalVisible((current) => !current);
+              }}
+            >
+              <TerminalIcon />
+            </button>
+          </aside>
+
+          <div className="ha-playground-sidebar">
+            <div className="ha-playground-sidebar-header">
+              <span>资源管理器</span>
+              <span className="ha-playground-sidebar-badge">WORKSPACE</span>
+            </div>
+            <PlaygroundFileTree
+              files={files}
+              activeFile={state.activeFile}
+              onSelectFile={selectFile}
+            />
           </div>
 
-          {terminalVisible ? (
-            <PlaygroundTerminal
-              sectionId={state.sectionId}
-              status={state.status}
-            />
-          ) : null}
+          <div className="ha-playground-main">
+            <div className="ha-playground-editor-pane">
+              <div className="ha-playground-tabs">
+                <button type="button" className="ha-playground-tab is-active">
+                  <EditorTabIcon path={state.activeFile} />
+                  <span>{activeTabTitle}</span>
+                </button>
+              </div>
+              <div
+                className="ha-playground-editor-shell"
+                data-active-file={state.activeFile ?? ''}
+              >
+                <PlaygroundEditor
+                  path={state.activeFile}
+                  value={activeFileContent}
+                  anchor={activeFileAnchor}
+                  onChange={updateActiveFile}
+                />
+              </div>
+            </div>
+
+            {terminalVisible ? (
+              <PlaygroundTerminal
+                sectionId={state.sectionId}
+                status={state.status}
+              />
+            ) : null}
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
+}
+
+function getBootStageLabel(
+  bootStage: ReturnType<typeof usePlayground>['state']['bootStage']
+) {
+  switch (bootStage) {
+    case 'prelude':
+      return '启动前奏';
+    case 'loading-kernel':
+      return '加载内核';
+    case 'mounting-snapshot':
+      return '挂载快照';
+    case 'starting-shell':
+      return '启动终端';
+    case 'ready':
+      return '准备就绪';
+    default:
+      return null;
+  }
 }
 
 function ExplorerIcon() {

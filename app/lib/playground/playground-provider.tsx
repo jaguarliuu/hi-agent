@@ -10,11 +10,13 @@ import React, {
   useState,
   type ReactNode
 } from 'react';
+import type { PlaygroundDrawerProps } from './playground-drawer';
 import { getPlaygroundManifest } from './manifest-loader';
 import type { PlaygroundManifest } from './manifest-schema';
 import {
   initialPlaygroundState,
   playgroundReducer,
+  type PlaygroundBootStage,
   type PlaygroundState
 } from './playground-state';
 import {
@@ -54,12 +56,21 @@ interface PlaygroundProviderProps {
 }
 
 type OpenMode = 'project' | 'command' | 'file';
+type DrawerPhase = 'closed' | PlaygroundDrawerProps['phase'];
 
 function toFileEntries(files: string[]) {
   return files.map((path) => ({ path }));
 }
 
-const LazyPlaygroundDrawer = dynamic(
+const BOOT_STAGE_MIN_VISIBLE_MS = 160;
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+const LazyPlaygroundDrawer = dynamic<PlaygroundDrawerProps>(
   () =>
     import('./playground-drawer').then((module) => ({
       default: module.PlaygroundDrawer
@@ -72,12 +83,14 @@ const LazyPlaygroundDrawer = dynamic(
 
 export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
   const [state, dispatch] = useReducer(playgroundReducer, initialPlaygroundState);
-  const [isOpen, setIsOpen] = useState(false);
+  const [drawerPhase, setDrawerPhase] = useState<DrawerPhase>('closed');
   const [manifest, setManifest] = useState<PlaygroundManifest | null>(null);
   const [files, setFiles] = useState<PlaygroundFileEntry[]>([]);
   const [activeFileContent, setActiveFileContent] = useState('');
   const [activeFileAnchor, setActiveFileAnchor] = useState<string | null>(null);
   const activeRequestIdRef = useRef(0);
+  const isDrawerVisible = drawerPhase !== 'closed';
+  const isOpen = isDrawerVisible;
 
   function resetDrawerState(sectionId: string) {
     setFiles([]);
@@ -113,7 +126,7 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
       setActiveFileContent(content);
       setActiveFileAnchor(anchor);
       dispatch({
-        type: 'WORKSPACE_READY',
+        type: 'ACTIVE_FILE_CHANGED',
         sectionId,
         activeFile: path
       });
@@ -124,29 +137,77 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
   async function openSection(sectionId: string, mode: OpenMode, blockId?: string) {
     const nextManifest = getPlaygroundManifest(sectionId);
     const requestId = startOpenRequest(sectionId);
+    let lastBootStageAt = 0;
+
+    async function waitForBootStageVisibility() {
+      if (lastBootStageAt === 0) {
+        return isActiveRequest(requestId);
+      }
+
+      const elapsed = performance.now() - lastBootStageAt;
+      if (elapsed < BOOT_STAGE_MIN_VISIBLE_MS) {
+        await sleep(BOOT_STAGE_MIN_VISIBLE_MS - elapsed);
+      }
+
+      return isActiveRequest(requestId);
+    }
+
+    async function advanceBootStage(
+      bootStage: Exclude<PlaygroundBootStage, 'idle' | 'ready'>,
+      status: 'booting' | 'loading'
+    ) {
+      if (!(await waitForBootStageVisibility())) {
+        return false;
+      }
+
+      dispatch({
+        type: 'BOOT_STAGE_CHANGED',
+        sectionId,
+        bootStage,
+        status
+      });
+      lastBootStageAt = performance.now();
+      return true;
+    }
+
     startTransition(() => {
       setManifest(nextManifest);
-      setIsOpen(true);
-    });
-
-    if (!window.crossOriginIsolated) {
-      startTransition(() => {
-        if (isActiveRequest(requestId)) {
-          dispatch({ type: 'UNSUPPORTED' });
+      setDrawerPhase((current) => {
+        if (current === 'closed' || current === 'closing') {
+          return 'opening';
         }
+        return current;
       });
-      return;
-    }
+    });
 
     try {
       dispatch({ type: 'BOOT_STARTED', sectionId });
+      if (!(await advanceBootStage('prelude', 'booting'))) {
+        return;
+      }
+
+      if (!window.crossOriginIsolated) {
+        startTransition(() => {
+          if (isActiveRequest(requestId)) {
+            dispatch({ type: 'UNSUPPORTED' });
+          }
+        });
+        return;
+      }
+
+      if (!(await advanceBootStage('loading-kernel', 'booting'))) {
+        return;
+      }
+
       await getWebcontainer();
 
       if (!isActiveRequest(requestId)) {
         return;
       }
 
-      dispatch({ type: 'WORKSPACE_LOADING', sectionId });
+      if (!(await advanceBootStage('mounting-snapshot', 'loading'))) {
+        return;
+      }
 
       await prepareSectionWorkspace(nextManifest);
       if (!isActiveRequest(requestId)) {
@@ -187,7 +248,25 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
         return;
       }
 
+      if (!(await advanceBootStage('starting-shell', 'loading'))) {
+        return;
+      }
+
       await ensureInteractiveShell(sectionId);
+
+      if (!isActiveRequest(requestId)) {
+        return;
+      }
+
+      if (!(await waitForBootStageVisibility())) {
+        return;
+      }
+
+      dispatch({
+        type: 'WORKSPACE_READY',
+        sectionId,
+        activeFile: targetPath
+      });
 
       if (mode === 'command' && blockId) {
         dispatch({ type: 'COMMAND_DISPATCHED', sectionId });
@@ -230,6 +309,29 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
     await writeWorkspaceFile(state.activeFile, next);
   }
 
+  function closeDrawer() {
+    activeRequestIdRef.current += 1;
+    void teardownInteractiveShell();
+    setDrawerPhase((current) => {
+      if (current === 'closed') {
+        return current;
+      }
+      return 'closing';
+    });
+  }
+
+  function handleDrawerPhaseComplete(phase: PlaygroundDrawerProps['phase']) {
+    setDrawerPhase((current) => {
+      if (phase === 'opening' && current === 'opening') {
+        return 'open';
+      }
+      if (phase === 'closing' && current === 'closing') {
+        return 'closed';
+      }
+      return current;
+    });
+  }
+
   const value: PlaygroundContextValue = {
     isOpen,
     manifest,
@@ -240,11 +342,7 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
     openProject: (sectionId) => openSection(sectionId, 'project'),
     runCommand: (sectionId, blockId) => openSection(sectionId, 'command', blockId),
     openFile: (sectionId, blockId) => openSection(sectionId, 'file', blockId),
-    closeDrawer: () => {
-      activeRequestIdRef.current += 1;
-      void teardownInteractiveShell();
-      setIsOpen(false);
-    },
+    closeDrawer,
     selectFile,
     updateActiveFile
   };
@@ -252,7 +350,12 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
   return (
     <PlaygroundContext.Provider value={value}>
       {children}
-      {isOpen ? <LazyPlaygroundDrawer /> : null}
+      {isDrawerVisible ? (
+        <LazyPlaygroundDrawer
+          phase={drawerPhase}
+          onPhaseComplete={handleDrawerPhaseComplete}
+        />
+      ) : null}
     </PlaygroundContext.Provider>
   );
 }

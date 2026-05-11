@@ -9,6 +9,10 @@ import {
   type PlaygroundContextValue
 } from '@/app/lib/playground/playground-provider';
 import type { PlaygroundManifest } from '@/app/lib/playground/manifest-schema';
+import {
+  flushTransition,
+  withReducedMotion
+} from '@/tests/helpers/motion-test-utils';
 
 const {
   getPlaygroundManifestMock,
@@ -101,6 +105,7 @@ function createContextValue(): PlaygroundContextValue {
     manifest,
     state: {
       status: 'ready',
+      bootStage: 'ready',
       sectionId: manifest.id,
       activeFile: 'src/main.ts',
       error: null
@@ -163,6 +168,61 @@ function PlaygroundHarness() {
   );
 }
 
+function getDrawer() {
+  return screen.queryByLabelText('Runnable playground');
+}
+
+function getBackdrop() {
+  return document.querySelector('[data-playground-backdrop]');
+}
+
+function getBootStageNode() {
+  return document.querySelector<HTMLElement>('[data-boot-stage]');
+}
+
+function collectCommittedDrawerPhases() {
+  const phases = new Set<string>();
+  const captureNode = (node: Node) => {
+    if (!(node instanceof HTMLElement)) {
+      return;
+    }
+
+    if (node.hasAttribute('data-drawer-phase')) {
+      phases.add(node.getAttribute('data-drawer-phase') ?? '');
+    }
+
+    node.querySelectorAll<HTMLElement>('[data-drawer-phase]').forEach((element) => {
+      phases.add(element.getAttribute('data-drawer-phase') ?? '');
+    });
+  };
+
+  captureNode(document.body);
+
+  const recordObserver = new MutationObserver((records) => {
+    records.forEach((record) => {
+      if (record.type === 'attributes') {
+        captureNode(record.target);
+        return;
+      }
+
+      record.addedNodes.forEach(captureNode);
+      record.removedNodes.forEach(captureNode);
+    });
+  });
+
+  recordObserver.observe(document.body, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ['data-drawer-phase']
+  });
+
+  return {
+    phases,
+    disconnect: () => recordObserver.disconnect()
+  };
+}
+
 describe('PlaygroundDrawer', () => {
   beforeEach(() => {
     getPlaygroundManifestMock.mockReturnValue(manifest);
@@ -193,7 +253,7 @@ describe('PlaygroundDrawer', () => {
   it('renders the playground title, file tree, editor, and terminal', () => {
     render(
       <PlaygroundContext.Provider value={createContextValue()}>
-        <PlaygroundDrawer />
+        <PlaygroundDrawer phase="open" onPhaseComplete={vi.fn()} />
       </PlaygroundContext.Provider>
     );
 
@@ -220,6 +280,168 @@ describe('PlaygroundDrawer', () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Runnable playground')).not.toBeInTheDocument();
     expect(screen.queryByTestId('monaco-editor')).not.toBeInTheDocument();
+  });
+
+  it('surfaces boot narrative stages while opening the playground', async () => {
+    const webcontainerReady = createDeferred<{}>();
+    const workspaceReady = createDeferred<void>();
+    const shellReady = createDeferred<{
+      process: {};
+      input: { write: ReturnType<typeof vi.fn> };
+      output: ReadableStream;
+      resize: ReturnType<typeof vi.fn>;
+      dispose: ReturnType<typeof vi.fn>;
+    }>();
+
+    getWebcontainerMock.mockImplementationOnce(() => webcontainerReady.promise);
+    prepareSectionWorkspaceMock.mockImplementationOnce(() => workspaceReady.promise);
+    ensureInteractiveShellMock.mockImplementationOnce(() => shellReady.promise);
+
+    render(
+      <PlaygroundProvider>
+        <PlaygroundHarness />
+      </PlaygroundProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '打开实验' }));
+
+    await waitFor(
+      () => {
+        expect(getBootStageNode()).toHaveAttribute('data-boot-stage', 'prelude');
+      },
+      { timeout: 1000 }
+    );
+    expect(screen.getByText('启动前奏')).toBeInTheDocument();
+
+    await screen.findByText('加载内核', {}, { timeout: 1000 });
+    expect(getBootStageNode()).toHaveAttribute('data-boot-stage', 'loading-kernel');
+
+    webcontainerReady.resolve({});
+    await screen.findByText('挂载快照', {}, { timeout: 1000 });
+    expect(getBootStageNode()).toHaveAttribute(
+      'data-boot-stage',
+      'mounting-snapshot'
+    );
+
+    workspaceReady.resolve(undefined);
+    await screen.findByText('启动终端', {}, { timeout: 1000 });
+    expect(getBootStageNode()).toHaveAttribute('data-boot-stage', 'starting-shell');
+
+    shellReady.resolve({
+      process: {},
+      input: { write: vi.fn().mockResolvedValue(undefined) },
+      output: new ReadableStream(),
+      resize: vi.fn(),
+      dispose: vi.fn().mockResolvedValue(undefined)
+    });
+    await screen.findByText('准备就绪', {}, { timeout: 1000 });
+    expect(getBootStageNode()).toHaveAttribute('data-boot-stage', 'ready');
+  });
+
+  it('keeps explicit opening, open, and closing phases around the drawer lifecycle', async () => {
+    render(
+      <PlaygroundProvider>
+        <PlaygroundHarness />
+      </PlaygroundProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '打开实验' }));
+
+    await waitFor(() => {
+      expect(getDrawer()).toHaveAttribute('data-drawer-phase', 'opening');
+    });
+    expect(getBackdrop()).toHaveAttribute('data-drawer-phase', 'opening');
+    await waitFor(() => {
+      expect(getDrawer()).toHaveAttribute('data-drawer-transition', 'active');
+    });
+
+    flushTransition(getDrawer()!);
+
+    await waitFor(() => {
+      expect(getDrawer()).toHaveAttribute('data-drawer-phase', 'open');
+    });
+    expect(getBackdrop()).toHaveAttribute('data-drawer-phase', 'open');
+
+    fireEvent.click(screen.getByRole('button', { name: '关闭' }));
+
+    expect(getDrawer()).toHaveAttribute('data-drawer-phase', 'closing');
+    expect(getBackdrop()).toHaveAttribute('data-drawer-phase', 'closing');
+
+    flushTransition(getDrawer()!);
+
+    await waitFor(() => {
+      expect(getDrawer()).not.toBeInTheDocument();
+    });
+    expect(getBackdrop()).not.toBeInTheDocument();
+  });
+
+  it('closes to the fully closed state under reduced motion without waiting for a tween', async () => {
+    await withReducedMotion(true, async () => {
+      render(
+        <PlaygroundProvider>
+          <PlaygroundHarness />
+        </PlaygroundProvider>
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: '打开实验' }));
+
+      await waitFor(() => {
+        expect(getDrawer()).toHaveAttribute('data-drawer-phase', 'open');
+      });
+
+      const committedPhases = collectCommittedDrawerPhases();
+      fireEvent.click(screen.getByRole('button', { name: '关闭' }));
+
+      expect(getDrawer()).toHaveAttribute('data-drawer-phase', 'closing');
+      expect(getBackdrop()).toHaveAttribute('data-drawer-phase', 'closing');
+      await Promise.resolve();
+      expect(committedPhases.phases).toContain('closing');
+
+      await waitFor(() => {
+        expect(getDrawer()).not.toBeInTheDocument();
+      });
+      committedPhases.disconnect();
+
+      expect(getBackdrop()).not.toBeInTheDocument();
+    });
+  });
+
+  it('finishes closing if interrupted before the opening transition starts', async () => {
+    const requestAnimationFrameMock = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation(() => 1);
+    const cancelAnimationFrameMock = vi
+      .spyOn(window, 'cancelAnimationFrame')
+      .mockImplementation(() => {});
+
+    try {
+      render(
+        <PlaygroundProvider>
+          <PlaygroundHarness />
+        </PlaygroundProvider>
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: '打开实验' }));
+
+      await waitFor(() => {
+        expect(getDrawer()).toHaveAttribute('data-drawer-phase', 'opening');
+      });
+      expect(getDrawer()).toHaveAttribute('data-drawer-transition', 'idle');
+
+      fireEvent.click(screen.getByRole('button', { name: '关闭' }));
+
+      expect(getDrawer()).toHaveAttribute('data-drawer-phase', 'closing');
+
+      await waitFor(() => {
+        expect(getDrawer()).not.toBeInTheDocument();
+      });
+
+      expect(getBackdrop()).not.toBeInTheDocument();
+      expect(cancelAnimationFrameMock).toHaveBeenCalled();
+    } finally {
+      requestAnimationFrameMock.mockRestore();
+      cancelAnimationFrameMock.mockRestore();
+    }
   });
 
   it('clears stale workspace state when reopening in an unsupported browser', async () => {
