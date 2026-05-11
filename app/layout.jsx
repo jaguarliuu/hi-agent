@@ -5,6 +5,7 @@ import 'nextra-theme-docs/style.css'
 import './globals.css'
 import { ThemeSwitchRelocator } from './theme-switch-relocator'
 import { MotionProvider } from './lib/motion/motion-context'
+import { ThemeTransitionToggle } from './lib/motion/theme-transition-toggle'
 
 export const metadata = {
   metadataBase: new URL('https://jaguarliuu.github.io/hi-agent'),
@@ -72,6 +73,7 @@ export default async function RootLayout({ children }) {
       <body>
         <ThemeSwitchRelocator />
         <MotionProvider>
+          <ThemeTransitionToggle />
           <Layout
             banner={banner}
             navbar={navbar}

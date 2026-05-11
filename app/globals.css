@@ -185,47 +185,121 @@ body,
   margin-right: 4px;
 }
 
-/* The theme-switch button is moved into the navbar by ThemeSwitchRelocator.
- * Nextra's original button ships with Tailwind `x:grow` (flex-grow: 1),
- * which would stretch the button across the row once placed in navbar's
- * flex line. We neutralize grow/shrink so it sizes to its content and
- * sits snugly next to the GitHub icon. */
+/* The theme-switch toggle is rendered by <ThemeTransitionToggle> into a
+ * slot that this CSS selector targets. We replaced Nextra's stock
+ * Listbox so we could drive the View-Transitions circular sweep
+ * defined below; the toggle is a two-state light/dark button. */
 .ha-theme-slot {
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
 }
-.ha-theme-slot > button[title="Change theme"] {
-  flex: 0 0 auto !important;
+
+[data-ha-theme-toggle] {
+  flex: 0 0 auto;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
   height: 28px;
-  padding: 0 8px;
-  gap: 6px;
+  padding: 0;
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
   color: var(--ha-fg-muted);
-  font-size: 12px;
-  line-height: 1;
-  transition: color 0.2s ease, background 0.2s ease,
-    border-color 0.2s ease;
+  cursor: pointer;
+  transition: color var(--ha-motion-duration-sm)
+      var(--ha-motion-ease-standard),
+    background var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    border-color var(--ha-motion-duration-sm)
+      var(--ha-motion-ease-standard);
 }
-.ha-theme-slot > button[title="Change theme"] svg {
-  height: 14px;
+
+[data-ha-theme-toggle]:hover {
+  color: var(--ha-accent);
+  background: var(--ha-accent-soft);
+  border-color: var(--ha-accent-soft);
+}
+
+[data-ha-theme-toggle]:active {
+  transform: scale(0.94);
+  transition-duration: var(--ha-motion-duration-xs);
+}
+
+[data-ha-theme-toggle] .ha-theme-toggle-icon {
+  position: absolute;
   width: 14px;
-  transition: transform 0.3s ease;
+  height: 14px;
+  transition: transform var(--ha-motion-duration-md)
+      var(--ha-motion-ease-standard),
+    opacity var(--ha-motion-duration-md) var(--ha-motion-ease-standard);
 }
-.ha-theme-slot > button[title="Change theme"]:hover {
-  color: var(--ha-accent);
-  background: var(--ha-accent-soft);
-  border-color: var(--ha-accent-soft);
+
+/* Sun is shown in light, moon in dark. Cross-fade + rotate for a
+ * little personality; the circular sweep is the main event. */
+[data-ha-theme-toggle][data-theme-resolved='light']
+  .ha-theme-toggle-icon-sun {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
 }
-.ha-theme-slot > button[title="Change theme"]:hover svg {
-  transform: rotate(20deg);
+[data-ha-theme-toggle][data-theme-resolved='light']
+  .ha-theme-toggle-icon-moon {
+  opacity: 0;
+  transform: rotate(45deg) scale(0.7);
 }
-.ha-theme-slot > button[title="Change theme"][aria-expanded="true"] {
-  color: var(--ha-accent);
-  background: var(--ha-accent-soft);
-  border-color: var(--ha-accent-soft);
+[data-ha-theme-toggle][data-theme-resolved='dark']
+  .ha-theme-toggle-icon-sun {
+  opacity: 0;
+  transform: rotate(-45deg) scale(0.7);
+}
+[data-ha-theme-toggle][data-theme-resolved='dark']
+  .ha-theme-toggle-icon-moon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+/* Unknown (pre-hydration): show the sun to match SSR; suppress the
+ * moon so we never flash both icons overlapped. */
+[data-ha-theme-toggle][data-theme-resolved='unknown']
+  .ha-theme-toggle-icon-moon {
+  opacity: 0;
+}
+
+/* -----------------------------------------------------------------
+ * View Transitions · circular theme sweep
+ *
+ * Inspired by https://juejin.cn/post/7361721559239524390 (element-
+ * plus recipe). We disable the browser's default cross-fade on both
+ * the old and new snapshots so our programmatic `clipPath` animation
+ * from theme-transition-toggle.tsx is the only thing the user sees.
+ *
+ * The "going light" direction keeps the old (dark) snapshot on top
+ * and shrinks its visible region, revealing the new light surface
+ * beneath — so we give the old a higher stacking order only when
+ * leaving dark.
+ * ----------------------------------------------------------------- */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html.dark::view-transition-old(root) {
+  z-index: 1;
+}
+html.dark::view-transition-new(root) {
+  z-index: 2;
+}
+html:not(.dark)::view-transition-old(root) {
+  z-index: 2;
+}
+html:not(.dark)::view-transition-new(root) {
+  z-index: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.01ms !important;
+  }
 }
 
 /* The sidebar footer that used to host the theme-switch button is now empty;
