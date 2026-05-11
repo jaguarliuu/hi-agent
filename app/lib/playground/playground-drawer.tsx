@@ -5,6 +5,7 @@ import { usePlayground } from './playground-provider';
 import { PlaygroundEditor } from './playground-editor';
 import { PlaygroundFileTree } from './playground-file-tree';
 import { PlaygroundTerminal } from './playground-terminal';
+import { usePlaygroundTheme } from './use-playground-theme';
 
 export function PlaygroundDrawer() {
   const {
@@ -18,12 +19,17 @@ export function PlaygroundDrawer() {
     updateActiveFile
   } = usePlayground();
   const [terminalVisible, setTerminalVisible] = useState(true);
+  const theme = usePlaygroundTheme();
 
   const title = manifest?.title ?? 'Runnable Example';
   const activeTabTitle = state.activeFile?.split('/').at(-1) ?? 'welcome.ts';
 
   return (
-    <aside className="ha-playground is-open" aria-label="Runnable playground">
+    <aside
+      className="ha-playground is-open"
+      data-playground-theme={theme}
+      aria-label="Runnable playground"
+    >
       <header className="ha-playground-header">
         <div className="ha-playground-brand">
           <span className="ha-playground-brand-mark">{'</>'}</span>

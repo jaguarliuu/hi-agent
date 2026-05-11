@@ -9,6 +9,30 @@ import {
   teardownInteractiveShell,
   type InteractiveShellHandle
 } from './webcontainer-manager';
+import { usePlaygroundTheme, type PlaygroundTheme } from './use-playground-theme';
+
+const XTERM_THEMES: Record<PlaygroundTheme, {
+  background: string;
+  foreground: string;
+  cursor: string;
+  cursorAccent: string;
+  selectionBackground: string;
+}> = {
+  dark: {
+    background: '#12141a',
+    foreground: '#d9def7',
+    cursor: '#d9def7',
+    cursorAccent: '#12141a',
+    selectionBackground: 'rgba(120, 140, 210, 0.35)'
+  },
+  light: {
+    background: '#f7f8fa',
+    foreground: '#1f2328',
+    cursor: '#1f2328',
+    cursorAccent: '#f7f8fa',
+    selectionBackground: 'rgba(70, 105, 210, 0.22)'
+  }
+};
 
 export interface PlaygroundTerminalHandle {
   writeCommand: (commandLine: string) => Promise<void>;
@@ -33,6 +57,9 @@ export function PlaygroundTerminal({
   const dataDisposableRef = useRef<{ dispose: () => void } | null>(null);
   const outputReaderRef = useRef<ReadableStreamDefaultReader<string> | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const theme = usePlaygroundTheme();
+  const themeRef = useRef<PlaygroundTheme>(theme);
+  themeRef.current = theme;
 
   useImperativeHandle(
     handleRef ?? { current: null },
@@ -60,13 +87,7 @@ export function PlaygroundTerminal({
       lineHeight: 1.3,
       cursorBlink: true,
       convertEol: true,
-      theme: {
-        background: '#12141a',
-        foreground: '#d9def7',
-        cursor: '#d9def7',
-        cursorAccent: '#12141a',
-        selectionBackground: 'rgba(120, 140, 210, 0.35)'
-      },
+      theme: XTERM_THEMES[themeRef.current],
       allowProposedApi: true
     });
     const fit = new FitAddon();
@@ -170,6 +191,12 @@ export function PlaygroundTerminal({
       void teardownInteractiveShell();
     };
   }, []);
+
+  useEffect(() => {
+    const term = xtermRef.current;
+    if (!term) return;
+    term.options.theme = XTERM_THEMES[theme];
+  }, [theme]);
 
   return (
     <section className="ha-playground-output-shell" aria-label="Terminal">

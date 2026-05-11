@@ -4,6 +4,7 @@ import React from 'react';
 import Editor from '@monaco-editor/react';
 import { useEffect, useRef } from 'react';
 import { findAnchorPosition } from './anchor-locator';
+import { usePlaygroundTheme } from './use-playground-theme';
 
 interface PlaygroundEditorProps {
   path: string | null;
@@ -22,6 +23,7 @@ export function PlaygroundEditor({
     setPosition: (position: { lineNumber: number; column: number }) => void;
     revealLineInCenter: (lineNumber: number) => void;
   } | null>(null);
+  const theme = usePlaygroundTheme();
 
   useEffect(() => {
     if (!editorRef.current || !anchor) {
@@ -38,7 +40,7 @@ export function PlaygroundEditor({
       height="100%"
       path={path ?? undefined}
       language={resolveEditorLanguage(path)}
-      theme="vs-dark"
+      theme={theme === 'light' ? 'vs' : 'vs-dark'}
       value={value}
       beforeMount={(monaco) => {
         monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
