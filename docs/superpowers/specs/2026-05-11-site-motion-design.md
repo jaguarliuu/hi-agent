@@ -141,6 +141,46 @@ Hard rules:
    (removing it from the production bundle would add build complexity)
    but requires the explicit opt-in above, so it costs ~0 to users.
 
+#### How to use
+
+One-shot (single page):
+
+```
+http://localhost:3000/?motion-debug=1
+```
+
+Navigate with the query string in the URL bar (a hard reload, not an
+in-app client navigation, so Nextra/Next.js can't drop the search
+part). `document.documentElement.dataset.motionDebug` should read
+`"slow"`. Remove the query string and reload to disable.
+
+Persistent (across route changes and reloads):
+
+```js
+// Enable
+localStorage.setItem('HA_MOTION_DEBUG', '1');
+location.reload();
+
+// Disable
+localStorage.removeItem('HA_MOTION_DEBUG');
+location.reload();
+```
+
+This path does not depend on the URL, so it survives Next.js App
+Router client-side transitions that may strip query strings.
+
+Sanity check:
+
+```js
+document.documentElement.dataset.motionDebug;   // → "slow" when active
+window.matchMedia('(prefers-reduced-motion: reduce)').matches; // must be false
+window.location.search;                         // "?motion-debug=1" for URL path
+```
+
+If all three look right but `dataset.motionDebug` is still `undefined`,
+open the browser's React dev tools and confirm `<MotionProvider>` is in
+the tree — it is mounted from `app/layout.jsx`.
+
 ### Runtime Wiring
 
 `<MotionProvider>` (`app/lib/motion/motion-context.tsx`) wraps the entire
