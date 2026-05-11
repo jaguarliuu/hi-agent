@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useEffectEvent, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from '../motion/use-reduced-motion';
 import { usePlayground } from './playground-provider';
 import { PlaygroundEditor } from './playground-editor';
@@ -32,16 +32,12 @@ export function PlaygroundDrawer({
   const theme = usePlaygroundTheme();
   const reducedMotion = useReducedMotion();
   const latestPhaseRef = useRef(phase);
+  const latestOnPhaseCompleteRef = useRef(onPhaseComplete);
   const latestTransitionActiveRef = useRef(isTransitionActive);
 
   latestPhaseRef.current = phase;
+  latestOnPhaseCompleteRef.current = onPhaseComplete;
   latestTransitionActiveRef.current = isTransitionActive;
-
-  const completePhase = useEffectEvent(
-    (nextPhase: PlaygroundDrawerProps['phase']) => {
-      onPhaseComplete(nextPhase);
-    }
-  );
 
   useEffect(() => {
     if (phase === 'open') {
@@ -52,7 +48,7 @@ export function PlaygroundDrawer({
     if (phase === 'opening') {
       if (reducedMotion) {
         setIsTransitionActive(true);
-        completePhase('opening');
+        latestOnPhaseCompleteRef.current('opening');
         return;
       }
 
@@ -73,14 +69,14 @@ export function PlaygroundDrawer({
 
     if (needsImmediateCloseCompletion) {
       const timeoutId = window.setTimeout(() => {
-        completePhase('closing');
+        latestOnPhaseCompleteRef.current('closing');
       }, 0);
 
       return () => {
         window.clearTimeout(timeoutId);
       };
     }
-  }, [completePhase, phase, reducedMotion]);
+  }, [phase, reducedMotion]);
 
   const title = manifest?.title ?? 'Runnable Example';
   const activeTabTitle = state.activeFile?.split('/').at(-1) ?? 'welcome.ts';
@@ -94,7 +90,7 @@ export function PlaygroundDrawer({
 
     const currentPhase = latestPhaseRef.current;
     if (currentPhase === 'opening' || currentPhase === 'closing') {
-      completePhase(currentPhase);
+      latestOnPhaseCompleteRef.current(currentPhase);
     }
   }
 
