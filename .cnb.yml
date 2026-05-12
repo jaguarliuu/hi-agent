@@ -1,0 +1,24 @@
+.node_ci: &node_ci
+  docker:
+    image: node:20
+    volumes:
+      - /root/.npm:copy-on-write
+  env:
+    NEXT_TELEMETRY_DISABLED: "1"
+  stages:
+    - name: install
+      script: npm ci
+    - name: test
+      script: npm test
+    - name: build
+      script: NODE_ENV=production npm run build
+
+main:
+  push:
+    - name: build
+      <<: *node_ci
+
+$:
+  pull_request:
+    - name: verify
+      <<: *node_ci
