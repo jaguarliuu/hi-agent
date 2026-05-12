@@ -17,6 +17,20 @@ main:
   push:
     - name: build
       <<: *node_ci
+    - name: update-knowledge-base
+      stages:
+        - name: update
+          type: knowledge:update
+          options:
+            include:
+              - README.md
+              - app/docs/**/*.mdx
+              - docs/**/*.md
+            exclude:
+              - node_modules/**
+              - .next/**
+              - out/**
+              - examples/**/workspace/**
 
 $:
   pull_request:

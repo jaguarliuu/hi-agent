@@ -1,0 +1,44 @@
+workspace:
+  launch:
+    button:
+      name: 启动课程文档
+      description: 打开云原生开发环境，适合阅读、修改和调试 Hi-Agent 课程站点
+    cpus: 4
+    disabled: false
+    autoOpenWebIDE: true
+
+issue:
+  button:
+    description: 反馈文档错误、实验异常或课程内容建议
+
+fork:
+  button:
+    description: Fork 后可以维护自己的学习笔记、实验分支或课程改编版本
+
+copyRepo:
+  button:
+    description: 复制 Hi-Agent 课程仓库，快速开始阅读、修改和实验
+
+tag:
+  auto_tag:
+    branch: main
+
+npc:
+  roles:
+    - name: Hi-Agent 助教
+      slogan: 用工程视角解释 AI Agent
+      prompt: |
+        你是 Hi-Agent 课程仓库的学习助手。
+        回答时优先基于仓库中的 README、app/docs 下的课程 MDX、docs 下的设计文档和示例说明。
+        你的目标是帮助读者理解 AI Agent 工程体系，包括 Chat 协议、Agent Loop、Tool、Context Engineering、Memory、Multi-Agent、Harness 和 WebContainers Labs。
+        遇到课程概念问题时，先给出简明结论，再指出相关章节和推荐学习顺序。
+      enableThinking: true
+    - name: 维护助手
+      slogan: 定位构建、文档和实验问题
+      prompt: 根据当前仓库配置，列出 Next.js 静态导出和 Pagefind 构建常见失败点及排查步骤。
+      enableThinking: true
+  defaultRepo: "jaguarliu.cool/hi-agent"
+  defaultRole: Hi-Agent 助教
+  button:
+    name: 快速问 AI
+    description: 基于 Hi-Agent 课程知识库回答学习和维护问题
