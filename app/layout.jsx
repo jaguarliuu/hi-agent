@@ -6,6 +6,7 @@ import './globals.css'
 import { ThemeSwitchRelocator } from './theme-switch-relocator'
 import { MotionProvider } from './lib/motion/motion-context'
 import { RouteMotionShell } from './lib/motion/route-motion-shell'
+import { ReadingProgress } from './lib/reading-progress'
 import { ThemeTransitionToggle } from './lib/motion/theme-transition-toggle'
 
 export const metadata = {
@@ -74,6 +75,7 @@ export default async function RootLayout({ children }) {
       <body>
         <ThemeSwitchRelocator />
         <MotionProvider>
+          <ReadingProgress />
           <Layout
             banner={banner}
             navbar={navbar}

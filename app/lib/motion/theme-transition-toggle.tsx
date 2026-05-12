@@ -166,6 +166,12 @@ export function ThemeTransitionToggle() {
             {
               duration: 480,
               easing: 'cubic-bezier(0.2, 0, 0, 1)',
+              // Keep the terminal keyframe applied until the browser
+              // tears down the transition pseudo-element. Without a
+              // fill mode, the old dark snapshot can snap back to an
+              // unclipped full-screen frame for a beat at the end of a
+              // dark -> light transition, which reads as a flash.
+              fill: 'both',
               pseudoElement,
             }
           );

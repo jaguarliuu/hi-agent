@@ -161,4 +161,74 @@ describe('<ThemeTransitionToggle>', () => {
       }
     }
   });
+
+  it('holds the last frame when shrinking the old dark snapshot during dark-to-light transitions', async () => {
+    resolvedTheme = 'dark';
+
+    const startViewTransition = vi.fn().mockImplementation((cb: () => void) => {
+      cb();
+      return {
+        ready: Promise.resolve(),
+        finished: Promise.resolve(),
+      };
+    });
+    (
+      document as Document & {
+        startViewTransition?: typeof startViewTransition;
+      }
+    ).startViewTransition = startViewTransition;
+
+    const animateMock = vi
+      .fn()
+      .mockReturnValue({ finished: Promise.resolve() });
+    const originalAnimate = (
+      HTMLElement.prototype as HTMLElement & {
+        animate?: unknown;
+      }
+    ).animate;
+    (
+      HTMLElement.prototype as HTMLElement & {
+        animate?: unknown;
+      }
+    ).animate = animateMock;
+
+    try {
+      renderToggle(false);
+      await waitForPortal();
+
+      const toggle = screen.getByRole('button', { name: '切换到浅色主题' });
+      fireEvent.click(toggle);
+
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(setThemeMock).toHaveBeenCalledWith('light');
+      expect(animateMock).toHaveBeenCalledTimes(1);
+      expect(animateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clipPath: expect.any(Array),
+        }),
+        expect.objectContaining({
+          pseudoElement: '::view-transition-old(root)',
+          fill: 'both',
+        })
+      );
+    } finally {
+      if (originalAnimate === undefined) {
+        delete (
+          HTMLElement.prototype as HTMLElement & {
+            animate?: unknown;
+          }
+        ).animate;
+      } else {
+        (
+          HTMLElement.prototype as HTMLElement & {
+            animate?: unknown;
+          }
+        ).animate = originalAnimate;
+      }
+    }
+  });
 });
