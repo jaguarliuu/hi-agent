@@ -63,9 +63,12 @@ main:
             : "${DEPLOY_HOST:?DEPLOY_HOST is not set in CNB secrets}"
             : "${DEPLOY_USER:?DEPLOY_USER is not set in CNB secrets}"
             : "${DEPLOY_SSH_KEY:?DEPLOY_SSH_KEY is not set in CNB secrets}"
-            echo "DEPLOY_HOST     = $DEPLOY_HOST"
-            echo "DEPLOY_USER     = $DEPLOY_USER"
-            echo "DEPLOY_SSH_KEY  = (length=${#DEPLOY_SSH_KEY})"
+            echo "DEPLOY_HOST bytes = ${#DEPLOY_HOST}"
+            echo "DEPLOY_USER bytes = ${#DEPLOY_USER}"
+            echo "DEPLOY_SSH_KEY bytes = ${#DEPLOY_SSH_KEY}"
+            # %q escapes whitespace/newlines so we can spot hidden chars safely
+            printf 'DEPLOY_HOST raw = %q\n' "$DEPLOY_HOST"
+            printf 'DEPLOY_USER raw = %q\n' "$DEPLOY_USER"
         - name: install ssh client
           script: apk add --no-cache openssh-client
         - name: prepare ssh key
@@ -73,26 +76,40 @@ main:
             set -eu
             mkdir -p ~/.ssh
             chmod 700 ~/.ssh
+            # Sanitize host/user in case secrets contain trailing CR/LF/space
+            CLEAN_HOST="$(printf '%s' "$DEPLOY_HOST" | tr -d '\r\n' | awk '{$1=$1;print}')"
+            CLEAN_USER="$(printf '%s' "$DEPLOY_USER" | tr -d '\r\n' | awk '{$1=$1;print}')"
+            export CLEAN_HOST CLEAN_USER
+            echo "CLEAN_HOST = [$CLEAN_HOST]"
+            echo "CLEAN_USER = [$CLEAN_USER]"
             printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
             chmod 600 ~/.ssh/id_ed25519
-            ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+            ssh-keyscan -H "$CLEAN_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+            # Persist cleaned values for later stages via a sourced file
+            printf 'export CLEAN_HOST=%s\nexport CLEAN_USER=%s\n' \
+              "$CLEAN_HOST" "$CLEAN_USER" > /tmp/deploy_env.sh
         - name: upload compose file
           script: |
             set -eu
+            . /tmp/deploy_env.sh
+            SCP_TARGET="$CLEAN_USER@$CLEAN_HOST:$DEPLOY_PATH/docker-compose.yml"
+            echo "SCP target = [$SCP_TARGET]"
             scp -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
               deploy/docker-compose.yml \
-              "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker-compose.yml"
+              "$SCP_TARGET"
         - name: write env file
           script: |
             set -eu
+            . /tmp/deploy_env.sh
             ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
-              "$DEPLOY_USER@$DEPLOY_HOST" \
+              "$CLEAN_USER@$CLEAN_HOST" \
               "printf 'HI_AGENT_IMAGE=%s\n' '$IMAGE_REPO:$CNB_COMMIT' > $DEPLOY_PATH/.env"
         - name: deploy
           script: |
             set -eu
+            . /tmp/deploy_env.sh
             ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
-              "$DEPLOY_USER@$DEPLOY_HOST" "
+              "$CLEAN_USER@$CLEAN_HOST" "
                 set -eu
                 cd $DEPLOY_PATH
                 docker compose pull
