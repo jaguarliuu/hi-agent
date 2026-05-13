@@ -74,9 +74,10 @@ main:
             echo "DEPLOY_HOST bytes = ${#DEPLOY_HOST}"
             echo "DEPLOY_USER bytes = ${#DEPLOY_USER}"
             echo "DEPLOY_SSH_KEY bytes = ${#DEPLOY_SSH_KEY}"
-            # %q escapes whitespace/newlines so we can spot hidden chars safely
-            printf 'DEPLOY_HOST raw = %q\n' "$DEPLOY_HOST"
-            printf 'DEPLOY_USER raw = %q\n' "$DEPLOY_USER"
+            # POSIX-safe visualization: 'od -c' surfaces hidden \n / \r / spaces.
+            # (We never dump DEPLOY_SSH_KEY.)
+            printf '%s' "$DEPLOY_HOST" | od -c | head -n 2
+            printf '%s' "$DEPLOY_USER" | od -c | head -n 2
         - name: install ssh client
           script: apk add --no-cache openssh-client
         - name: prepare ssh key
