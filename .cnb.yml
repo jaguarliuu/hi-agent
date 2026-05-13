@@ -47,6 +47,48 @@ main:
             docker push "$IMAGE_REPO:$CNB_COMMIT"
             docker push "$IMAGE_REPO:latest"
 
+    - name: deploy-to-server
+      docker:
+        image: alpine:3.20
+      env:
+        IMAGE_REPO: "$CNB_DOCKER_REGISTRY/$CNB_REPO_SLUG_LOWERCASE"
+        DEPLOY_PATH: "/opt/hi-agent"
+      stages:
+        - name: install ssh client
+          script: apk add --no-cache openssh-client
+        - name: prepare ssh key
+          script: |
+            set -eu
+            mkdir -p ~/.ssh
+            chmod 700 ~/.ssh
+            printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+            chmod 600 ~/.ssh/id_ed25519
+            ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+        - name: upload compose file
+          script: |
+            set -eu
+            scp -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
+              deploy/docker-compose.yml \
+              "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker-compose.yml"
+        - name: write env file
+          script: |
+            set -eu
+            ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
+              "$DEPLOY_USER@$DEPLOY_HOST" \
+              "printf 'HI_AGENT_IMAGE=%s\n' '$IMAGE_REPO:$CNB_COMMIT' > $DEPLOY_PATH/.env"
+        - name: deploy
+          script: |
+            set -eu
+            ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
+              "$DEPLOY_USER@$DEPLOY_HOST" "
+                set -eu
+                cd $DEPLOY_PATH
+                docker compose pull
+                docker compose up -d
+                docker image prune -f
+                docker compose ps
+              "
+
     - name: update-knowledge-base
       stages:
         - name: update

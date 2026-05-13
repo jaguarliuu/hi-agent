@@ -1,0 +1,12 @@
+services:
+  hi-agent:
+    image: ${HI_AGENT_IMAGE:-docker.cnb.cool/jaguarliu.cool/hi-agent:latest}
+    container_name: hi-agent
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
