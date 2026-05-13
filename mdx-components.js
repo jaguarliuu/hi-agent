@@ -2,8 +2,6 @@ import { Children, isValidElement } from 'react'
 import cn from 'clsx'
 import { useMDXComponents as getThemeComponents } from 'nextra-theme-docs'
 import { classes } from 'nextra/mdx-components/pre/index'
-import { ToggleWordWrapButton } from 'nextra/mdx-components/pre/toggle-word-wrap-button'
-import { WordWrapIcon } from 'nextra/icons'
 import { ZoomableImage } from './app/lib/zoomable-image'
 import { withBase } from './app/lib/base-path'
 import { CommandBlock } from './app/lib/command-block'
@@ -41,7 +39,6 @@ function MotionPre({
   'data-copy': copy,
   'data-filename': filename,
   'data-pagefind-ignore': pagefindIgnore,
-  'data-word-wrap': hasWordWrap,
   ...props
 }) {
   const copyContent = extractTextContent(Children.toArray(children))
@@ -88,22 +85,18 @@ function MotionPre({
         )}
         {...props}
       >
-        <div
-          className={cn(
-            'x:group-hover:opacity-100',
-            'x:group-focus:opacity-100',
-            'x:opacity-0 x:transition x:focus-within:opacity-100',
-            'x:flex x:gap-1 x:absolute x:right-4',
-            filename ? 'x:top-14' : 'x:top-2'
-          )}
-        >
-          {hasWordWrap === '' ? (
-            <ToggleWordWrapButton>
-              <WordWrapIcon height="1em" />
-            </ToggleWordWrapButton>
-          ) : null}
-          {!filename ? copyButton : null}
-        </div>
+        {!filename && copyButton ? (
+          <div
+            className={cn(
+              'x:group-hover:opacity-100',
+              'x:group-focus:opacity-100',
+              'x:opacity-0 x:transition x:focus-within:opacity-100',
+              'x:flex x:gap-1 x:absolute x:right-4 x:top-2'
+            )}
+          >
+            {copyButton}
+          </div>
+        ) : null}
         {children}
       </pre>
     </div>

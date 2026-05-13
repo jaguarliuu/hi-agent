@@ -40,6 +40,24 @@ export function PlaygroundDrawer({
   latestTransitionActiveRef.current = isTransitionActive;
 
   useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    const body = document.body;
+    const html = document.documentElement;
+    const previousBodyOverflow = body.style.overflow;
+    const previousHtmlOverflow = html.style.overflow;
+    body.style.overflow = 'hidden';
+    html.style.overflow = 'hidden';
+    html.dataset.haPlayground = 'open';
+    return () => {
+      body.style.overflow = previousBodyOverflow;
+      html.style.overflow = previousHtmlOverflow;
+      delete html.dataset.haPlayground;
+    };
+  }, []);
+
+  useEffect(() => {
     if (phase === 'open') {
       setIsTransitionActive(true);
       return;
@@ -117,19 +135,13 @@ export function PlaygroundDrawer({
             <h2>{title}</h2>
           </div>
           <div className="ha-playground-window-actions">
-            <div
-              className="ha-playground-status-cluster"
+            <span
+              className={`ha-playground-status status-${state.status}`}
               data-boot-stage={state.bootStage}
+              data-status={state.status}
             >
-              <span className={`ha-playground-status status-${state.status}`}>
-                {state.status}
-              </span>
-              {bootStageLabel ? (
-                <span className="ha-playground-boot-stage" data-boot-stage={state.bootStage}>
-                  {bootStageLabel}
-                </span>
-              ) : null}
-            </div>
+              {bootStageLabel ?? state.status}
+            </span>
             <button
               type="button"
               className="ha-playground-close"
@@ -177,7 +189,10 @@ export function PlaygroundDrawer({
             />
           </div>
 
-          <div className="ha-playground-main">
+          <div
+            className="ha-playground-main"
+            data-terminal-visible={terminalVisible ? 'true' : 'false'}
+          >
             <div className="ha-playground-editor-pane">
               <div className="ha-playground-tabs">
                 <button type="button" className="ha-playground-tab is-active">

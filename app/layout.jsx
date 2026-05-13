@@ -8,6 +8,8 @@ import { MotionProvider } from './lib/motion/motion-context'
 import { RouteMotionShell } from './lib/motion/route-motion-shell'
 import { ReadingProgress } from './lib/reading-progress'
 import { ThemeTransitionToggle } from './lib/motion/theme-transition-toggle'
+import { ToastProvider } from './lib/motion/toast-context'
+import { HeaderAutohide } from './lib/header-autohide'
 
 export const metadata = {
   metadataBase: new URL('https://jaguarliuu.github.io/hi-agent'),
@@ -74,23 +76,26 @@ export default async function RootLayout({ children }) {
       />
       <body>
         <ThemeSwitchRelocator />
+        <HeaderAutohide />
         <MotionProvider>
-          <ReadingProgress />
-          <Layout
-            banner={banner}
-            navbar={navbar}
-            search={search}
-            footer={footer}
-            pageMap={await getPageMap()}
-            docsRepositoryBase="https://github.com/jaguarliuu/hi-agent/tree/main"
-            editLink=""
-            feedback={{ content: '' }}
-            sidebar={{ defaultMenuCollapseLevel: 1, toggleButton: true }}
-            toc={{ backToTop: '回到顶部' }}
-          >
-            <ThemeTransitionToggle />
-            <RouteMotionShell>{children}</RouteMotionShell>
-          </Layout>
+          <ToastProvider>
+            <ReadingProgress />
+            <Layout
+              banner={banner}
+              navbar={navbar}
+              search={search}
+              footer={footer}
+              pageMap={await getPageMap()}
+              docsRepositoryBase="https://github.com/jaguarliuu/hi-agent/tree/main"
+              editLink=""
+              feedback={{ content: '' }}
+              sidebar={{ defaultMenuCollapseLevel: 1, toggleButton: true }}
+              toc={{ backToTop: '回到顶部' }}
+            >
+              <ThemeTransitionToggle />
+              <RouteMotionShell>{children}</RouteMotionShell>
+            </Layout>
+          </ToastProvider>
         </MotionProvider>
       </body>
     </html>

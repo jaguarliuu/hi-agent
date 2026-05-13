@@ -185,6 +185,43 @@ body,
   margin-right: 4px;
 }
 
+/* -------------------------------------------------------------------
+ * Header auto-hide
+ * 通过 <HeaderAutohide> 在 <html> 上写入 data-ha-header 状态，CSS
+ * 据此把 .nextra-navbar 整体上滑/落回。playground 打开时强制收起，
+ * 让出顶部空间；阅读时下滑收起、上滑或鼠标接近顶部时恢复。
+ * ------------------------------------------------------------------- */
+.nextra-navbar,
+.nextra-banner {
+  transition:
+    transform var(--ha-motion-duration-md, 220ms)
+      var(--ha-motion-ease-standard, cubic-bezier(0.2, 0, 0, 1)),
+    opacity var(--ha-motion-duration-md, 220ms)
+      var(--ha-motion-ease-standard, cubic-bezier(0.2, 0, 0, 1));
+  will-change: transform;
+}
+
+html[data-ha-header='collapsed'] .nextra-navbar {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* playground 打开时，整片顶部条带（banner + navbar）都隐藏，避免
+ * navbar 移走后留下黑色空隙。阅读模式下仅折叠 navbar，banner 仍可
+ * 正常展示与关闭。 */
+html[data-ha-playground='open'] .nextra-banner,
+html[data-ha-playground='open'] .nextra-navbar {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nextra-navbar,
+  .nextra-banner {
+    transition: none;
+  }
+}
+
 /* The theme-switch toggle is rendered by <ThemeTransitionToggle> into a
  * slot that this CSS selector targets. We replaced Nextra's stock
  * Listbox so we could drive the View-Transitions circular sweep
@@ -1576,26 +1613,19 @@ html.dark .mermaid .node path {
   gap: 10px;
 }
 
-.ha-playground-status-cluster {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-
 .ha-playground-status {
   display: inline-flex;
   align-items: center;
   min-height: 24px;
-  padding: 0 9px;
+  padding: 0 10px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.04);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.72);
   transition: background-color var(--ha-motion-duration-sm)
       var(--ha-motion-ease-standard),
     color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
@@ -1603,57 +1633,25 @@ html.dark .mermaid .node path {
     opacity var(--ha-motion-duration-sm) var(--ha-motion-ease-standard);
 }
 
-.ha-playground-status-cluster[data-boot-stage='prelude'] .ha-playground-status,
-.ha-playground-status-cluster[data-boot-stage='loading-kernel']
-  .ha-playground-status,
-.ha-playground-status-cluster[data-boot-stage='mounting-snapshot']
-  .ha-playground-status,
-.ha-playground-status-cluster[data-boot-stage='starting-shell']
-  .ha-playground-status {
-  opacity: 0.88;
+.ha-playground-status[data-boot-stage='prelude'],
+.ha-playground-status[data-boot-stage='loading-kernel'],
+.ha-playground-status[data-boot-stage='mounting-snapshot'],
+.ha-playground-status[data-boot-stage='starting-shell'] {
+  opacity: 0.9;
 }
 
 .ha-playground-status.status-ready,
 .ha-playground-status.status-running {
   color: #8ab4ff;
-  border-color: rgba(138, 180, 255, 0.2);
-  background: rgba(138, 180, 255, 0.08);
+  border-color: rgba(138, 180, 255, 0.24);
+  background: rgba(138, 180, 255, 0.1);
 }
 
 .ha-playground-status.status-error,
 .ha-playground-status.status-unsupported {
   color: #ff9d7a;
-  border-color: rgba(255, 157, 122, 0.18);
-  background: rgba(255, 157, 122, 0.08);
-}
-
-.ha-playground-boot-stage {
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  line-height: 1;
-  color: rgba(255, 255, 255, 0.54);
-  opacity: 0.76;
-  transform: translateY(0);
-  transition: color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
-    opacity var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
-    transform var(--ha-motion-duration-sm) var(--ha-motion-ease-standard);
-}
-
-.ha-playground-boot-stage[data-boot-stage='prelude'] {
-  color: rgba(255, 255, 255, 0.62);
-}
-
-.ha-playground-boot-stage[data-boot-stage='loading-kernel'],
-.ha-playground-boot-stage[data-boot-stage='mounting-snapshot'],
-.ha-playground-boot-stage[data-boot-stage='starting-shell'] {
-  color: rgba(138, 180, 255, 0.76);
-  opacity: 0.9;
-}
-
-.ha-playground-boot-stage[data-boot-stage='ready'] {
-  color: #8ab4ff;
-  opacity: 1;
+  border-color: rgba(255, 157, 122, 0.22);
+  background: rgba(255, 157, 122, 0.1);
 }
 
 .ha-playground-close {
@@ -1677,6 +1675,7 @@ html.dark .mermaid .node path {
 .ha-playground-body {
   flex: 1;
   min-height: 0;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 48px 250px minmax(0, 1fr);
 }
@@ -1721,6 +1720,7 @@ html.dark .mermaid .node path {
 .ha-playground-sidebar {
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
@@ -1858,13 +1858,19 @@ html.dark .mermaid .node path {
 
 .ha-playground-main {
   min-height: 0;
+  overflow: hidden;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) 200px;
+  grid-template-rows: minmax(0, 1fr);
   background: #1e1e1e;
+}
+
+.ha-playground-main[data-terminal-visible='true'] {
+  grid-template-rows: minmax(0, 1fr) minmax(220px, 38%);
 }
 
 .ha-playground-editor-pane {
   min-height: 0;
+  overflow: hidden;
   display: grid;
   grid-template-rows: 36px minmax(0, 1fr);
 }
@@ -1928,6 +1934,7 @@ html.dark .mermaid .node path {
 
 .ha-playground-editor-shell {
   min-height: 0;
+  overflow: hidden;
   background: #1e1e1e;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -1970,6 +1977,7 @@ html.dark .mermaid .node path {
 
 .ha-playground-output-shell {
   min-height: 0;
+  overflow: hidden;
   display: grid;
   grid-template-rows: 36px minmax(0, 1fr);
   background: #181818;
@@ -2068,6 +2076,7 @@ html.dark .mermaid .node path {
 
 .ha-playground-terminal-host .xterm-viewport {
   background-color: transparent !important;
+  overflow-y: auto !important;
 }
 
 .ha-playground-terminal-host .xterm-screen {
@@ -2103,7 +2112,7 @@ html.dark .mermaid .node path {
 .ha-playground[data-playground-theme='light'] .ha-playground-status {
   border-color: rgba(15, 23, 42, 0.12);
   background: rgba(15, 23, 42, 0.04);
-  color: rgba(15, 23, 42, 0.6);
+  color: rgba(15, 23, 42, 0.7);
 }
 
 .ha-playground[data-playground-theme='light'] .ha-playground-status.status-ready,
@@ -2120,29 +2129,6 @@ html.dark .mermaid .node path {
   background: rgba(196, 69, 43, 0.08);
 }
 
-.ha-playground[data-playground-theme='light'] .ha-playground-boot-stage {
-  color: rgba(15, 23, 42, 0.54);
-}
-
-.ha-playground[data-playground-theme='light']
-  .ha-playground-boot-stage[data-boot-stage='prelude'] {
-  color: rgba(15, 23, 42, 0.62);
-}
-
-.ha-playground[data-playground-theme='light']
-  .ha-playground-boot-stage[data-boot-stage='loading-kernel'],
-.ha-playground[data-playground-theme='light']
-  .ha-playground-boot-stage[data-boot-stage='mounting-snapshot'],
-.ha-playground[data-playground-theme='light']
-  .ha-playground-boot-stage[data-boot-stage='starting-shell'] {
-  color: rgba(29, 111, 216, 0.78);
-}
-
-.ha-playground[data-playground-theme='light']
-  .ha-playground-boot-stage[data-boot-stage='ready'] {
-  color: #1d6fd8;
-}
-
 .ha-playground[data-playground-theme='light'] .ha-playground-close {
   border-color: rgba(15, 23, 42, 0.14);
   background: rgba(15, 23, 42, 0.03);
@@ -2157,7 +2143,6 @@ html.dark .mermaid .node path {
 
 @media (prefers-reduced-motion: reduce) {
   .ha-playground-status,
-  .ha-playground-boot-stage,
   .ha-playground-flight-clone,
   .ha-playground-editor-highlight {
     transition: none;
@@ -2382,7 +2367,7 @@ html.dark .mermaid .node path {
 
 .ha-runnable-block > .nextra-code > pre:first-child {
   padding-top: 0.9rem;
-  padding-right: 150px;
+  padding-right: 148px;
 }
 
 .ha-runnable-block > .nextra-code > div {
@@ -2416,7 +2401,7 @@ html.dark .mermaid .node path {
 .ha-runnable-block-toolbar {
   position: absolute;
   top: 8px;
-  right: 44px;
+  right: 80px;
   z-index: 4;
   display: flex;
   align-items: center;
@@ -2425,7 +2410,7 @@ html.dark .mermaid .node path {
 
 .ha-runnable-block:has(> .nextra-code > div) .ha-runnable-block-toolbar {
   top: 10px;
-  right: 48px;
+  right: 88px;
 }
 
 .ha-runnable-block-action {
@@ -2509,7 +2494,7 @@ html.dark .mermaid .node path {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
+  min-width: 56px;
   min-height: 28px;
   white-space: nowrap;
   font-size: 11px;
@@ -2519,22 +2504,6 @@ html.dark .mermaid .node path {
       var(--ha-motion-ease-standard),
     border-color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
     color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard);
-}
-
-.nextra-code .ha-copy-feedback-button[data-copy-state='copied'] {
-  min-width: auto;
-  padding-inline: 10px !important;
-  border-color: rgba(52, 168, 83, 0.34) !important;
-  background: rgba(52, 168, 83, 0.18) !important;
-  color: #c7ffd6 !important;
-}
-
-.nextra-code .ha-copy-feedback-button[data-copy-state='error'] {
-  min-width: auto;
-  padding-inline: 10px !important;
-  border-color: rgba(255, 157, 122, 0.24) !important;
-  background: rgba(255, 157, 122, 0.14) !important;
-  color: #ffd8ca !important;
 }
 
 .nextra-code .ha-copy-feedback-label {
@@ -2590,18 +2559,6 @@ html:not(.dark) .ha-runnable-block .nextra-code > div .ha-copy-feedback-button:h
   background: #ffffff !important;
   color: #0f172a !important;
   border-color: rgba(15, 23, 42, 0.2) !important;
-}
-
-html:not(.dark) .nextra-code .ha-copy-feedback-button[data-copy-state='copied'] {
-  border-color: rgba(22, 163, 74, 0.24) !important;
-  background: rgba(22, 163, 74, 0.12) !important;
-  color: #166534 !important;
-}
-
-html:not(.dark) .nextra-code .ha-copy-feedback-button[data-copy-state='error'] {
-  border-color: rgba(196, 69, 43, 0.22) !important;
-  background: rgba(196, 69, 43, 0.1) !important;
-  color: #9f2d1e !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2685,5 +2642,94 @@ html:not(.dark) .nextra-code .ha-copy-feedback-button[data-copy-state='error'] {
     --ha-motion-duration-md: 960ms;
     --ha-motion-duration-lg: 1280ms;
     --ha-motion-duration-xl: 1920ms;
+  }
+}
+
+/* =====================================================================
+ * Global toast stack (used by ToastProvider)
+ * Lightweight, framework-free notifications anchored bottom-center.
+ * ===================================================================== */
+.ha-toast-stack {
+  position: fixed;
+  left: 50%;
+  bottom: 32px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.ha-toast-stack[data-empty='true'] {
+  display: none;
+}
+
+.ha-toast {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(24, 26, 32, 0.94);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: ha-toast-in var(--ha-motion-duration-sm, 220ms)
+    var(--ha-motion-ease-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.ha-toast[data-tone='success'] {
+  border-color: rgba(52, 168, 83, 0.4);
+  background: rgba(20, 64, 36, 0.94);
+  color: #d6ffe2;
+}
+
+.ha-toast[data-tone='error'] {
+  border-color: rgba(255, 110, 84, 0.42);
+  background: rgba(82, 24, 16, 0.94);
+  color: #ffd8ca;
+}
+
+html:not(.dark) .ha-toast {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+}
+
+html:not(.dark) .ha-toast[data-tone='success'] {
+  border-color: rgba(22, 163, 74, 0.3);
+  background: #e9f8ee;
+  color: #166534;
+}
+
+html:not(.dark) .ha-toast[data-tone='error'] {
+  border-color: rgba(196, 69, 43, 0.3);
+  background: #fde8e2;
+  color: #9f2d1e;
+}
+
+@keyframes ha-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ha-toast {
+    animation: none;
   }
 }
