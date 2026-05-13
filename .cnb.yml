@@ -57,12 +57,13 @@ main:
         - build-and-push-image
       docker:
         image: alpine:3.20
+      imports:
+        # 统一从 keys 仓库的 git_token.yml 引入：
+        #   GIT_TOKEN / DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY
+        - https://cnb.cool/jaguarliu.cool/keys/-/blob/main/git_token.yml
       env:
         IMAGE_REPO: "$CNB_DOCKER_REGISTRY/$CNB_REPO_SLUG_LOWERCASE"
         DEPLOY_PATH: "/opt/hi-agent"
-        DEPLOY_HOST: "$DEPLOY_HOST"
-        DEPLOY_USER: "$DEPLOY_USER"
-        DEPLOY_SSH_KEY: "$DEPLOY_SSH_KEY"
       stages:
         - name: check secrets
           script: |
