@@ -53,7 +53,19 @@ main:
       env:
         IMAGE_REPO: "$CNB_DOCKER_REGISTRY/$CNB_REPO_SLUG_LOWERCASE"
         DEPLOY_PATH: "/opt/hi-agent"
+        DEPLOY_HOST: "$DEPLOY_HOST"
+        DEPLOY_USER: "$DEPLOY_USER"
+        DEPLOY_SSH_KEY: "$DEPLOY_SSH_KEY"
       stages:
+        - name: check secrets
+          script: |
+            set -eu
+            : "${DEPLOY_HOST:?DEPLOY_HOST is not set in CNB secrets}"
+            : "${DEPLOY_USER:?DEPLOY_USER is not set in CNB secrets}"
+            : "${DEPLOY_SSH_KEY:?DEPLOY_SSH_KEY is not set in CNB secrets}"
+            echo "DEPLOY_HOST     = $DEPLOY_HOST"
+            echo "DEPLOY_USER     = $DEPLOY_USER"
+            echo "DEPLOY_SSH_KEY  = (length=${#DEPLOY_SSH_KEY})"
         - name: install ssh client
           script: apk add --no-cache openssh-client
         - name: prepare ssh key
