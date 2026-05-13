@@ -24,7 +24,6 @@ scripts/*.md
 
 Dockerfile
 .dockerignore
-docker
 
 cnb_hi_agent_deploy
 cnb_hi_agent_deploy.pub
