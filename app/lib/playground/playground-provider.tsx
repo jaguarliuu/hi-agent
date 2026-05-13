@@ -5,11 +5,13 @@ import React, {
   createContext,
   startTransition,
   useContext,
+  useEffect,
   useReducer,
   useRef,
   useState,
   type ReactNode
 } from 'react';
+import { createPortal } from 'react-dom';
 import {
   clearQueuedPlaygroundFlight,
   queuePlaygroundFlight
@@ -95,6 +97,14 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
   const activeRequestIdRef = useRef(0);
   const isDrawerVisible = drawerPhase !== 'closed';
   const isOpen = isDrawerVisible;
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    setPortalTarget(document.body);
+  }, []);
 
   function resetDrawerState(sectionId: string) {
     setFiles([]);
@@ -367,12 +377,15 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
   return (
     <PlaygroundContext.Provider value={value}>
       {children}
-      {isDrawerVisible ? (
-        <LazyPlaygroundDrawer
-          phase={drawerPhase}
-          onPhaseComplete={handleDrawerPhaseComplete}
-        />
-      ) : null}
+      {isDrawerVisible && portalTarget
+        ? createPortal(
+            <LazyPlaygroundDrawer
+              phase={drawerPhase}
+              onPhaseComplete={handleDrawerPhaseComplete}
+            />,
+            portalTarget
+          )
+        : null}
     </PlaygroundContext.Provider>
   );
 }
