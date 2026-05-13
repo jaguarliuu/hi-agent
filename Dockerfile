@@ -5,15 +5,14 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
-ENV NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --include=dev
 
 COPY . .
 
-RUN npm run build
+RUN NODE_ENV=production npm run build
 
 # ---------- Stage 2: serve with Caddy (adds COOP/COEP) ----------
 FROM caddy:2-alpine AS runtime
