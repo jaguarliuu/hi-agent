@@ -19,10 +19,15 @@ main:
       <<: *node_ci
 
     - name: build-and-push-image
+      needs:
+        - build
       services:
         - docker
       env:
         IMAGE_REPO: "$CNB_DOCKER_REGISTRY/$CNB_REPO_SLUG_LOWERCASE"
+      imports:
+        # 引用密钥仓库里的密钥文件
+        - https://cnb.cool/jaguarliu.cool/keys/-/blob/main/git_token.yml
       stages:
         - name: docker info
           script: |
@@ -48,6 +53,8 @@ main:
             docker push "$IMAGE_REPO:latest"
 
     - name: deploy-to-server
+      needs:
+        - build-and-push-image
       docker:
         image: alpine:3.20
       env:
