@@ -62,7 +62,11 @@ main:
         #   GIT_TOKEN / DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY
         - https://cnb.cool/jaguarliu.cool/keys/-/blob/main/git_token.yml
       env:
-        IMAGE_REPO: "$CNB_DOCKER_REGISTRY/$CNB_REPO_SLUG_LOWERCASE"
+        # $CNB_DOCKER_REGISTRY 只在带 docker service 的 runner 里注入，
+        # 普通 alpine runner 里可能为空 —— 这里硬编码成 CNB 制品域名，
+        # 保证 deploy job 永远能拼出正确的镜像路径。
+        IMAGE_REGISTRY: "docker.cnb.cool"
+        IMAGE_REPO: "docker.cnb.cool/$CNB_REPO_SLUG_LOWERCASE"
         DEPLOY_PATH: "/opt/hi-agent"
       stages:
         - name: check secrets
@@ -74,18 +78,23 @@ main:
             echo "DEPLOY_HOST bytes = ${#DEPLOY_HOST}"
             echo "DEPLOY_USER bytes = ${#DEPLOY_USER}"
             echo "DEPLOY_SSH_KEY bytes = ${#DEPLOY_SSH_KEY}"
-            # POSIX-safe visualization: 'od -c' surfaces hidden \n / \r / spaces.
-            # (We never dump DEPLOY_SSH_KEY.)
             printf '%s' "$DEPLOY_HOST" | od -c | head -n 2
             printf '%s' "$DEPLOY_USER" | od -c | head -n 2
+        - name: resolve image
+          script: |
+            set -eu
+            echo "CNB_REPO_SLUG_LOWERCASE = [$CNB_REPO_SLUG_LOWERCASE]"
+            echo "CNB_COMMIT              = [$CNB_COMMIT]"
+            echo "IMAGE_REPO              = [$IMAGE_REPO]"
+            echo "Target image (SHA)      = [$IMAGE_REPO:$CNB_COMMIT]"
+            echo "Target image (latest)   = [$IMAGE_REPO:latest]"
         - name: install ssh client
-          script: apk add --no-cache openssh-client
+          script: apk add --no-cache openssh-client curl
         - name: prepare ssh key
           script: |
             set -eu
             mkdir -p ~/.ssh
             chmod 700 ~/.ssh
-            # Sanitize host/user in case secrets contain trailing CR/LF/space
             CLEAN_HOST="$(printf '%s' "$DEPLOY_HOST" | tr -d '\r\n' | awk '{$1=$1;print}')"
             CLEAN_USER="$(printf '%s' "$DEPLOY_USER" | tr -d '\r\n' | awk '{$1=$1;print}')"
             export CLEAN_HOST CLEAN_USER
@@ -94,7 +103,6 @@ main:
             printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
             chmod 600 ~/.ssh/id_ed25519
             ssh-keyscan -H "$CLEAN_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-            # Persist cleaned values for later stages via a sourced file
             printf 'export CLEAN_HOST=%s\nexport CLEAN_USER=%s\n' \
               "$CLEAN_HOST" "$CLEAN_USER" > /tmp/deploy_env.sh
         - name: upload compose file
@@ -106,13 +114,39 @@ main:
             scp -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
               deploy/docker-compose.yml \
               "$SCP_TARGET"
+        - name: choose image tag
+          script: |
+            set -eu
+            . /tmp/deploy_env.sh
+            # Remote pull with retry: some registries have a short
+            # visibility window between 'push' and 'pull'.
+            CHOSEN=""
+            for TAG in "$CNB_COMMIT" latest; do
+              for i in 1 2 3 4 5; do
+                echo "[try #$i] ssh remote pull $IMAGE_REPO:$TAG"
+                if ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
+                     "$CLEAN_USER@$CLEAN_HOST" \
+                     "docker pull $IMAGE_REPO:$TAG"
+                then
+                  CHOSEN="$TAG"
+                  break 2
+                fi
+                sleep $((i * 3))
+              done
+            done
+            if [ -z "$CHOSEN" ]; then
+              echo "ERROR: could not pull any tag ($CNB_COMMIT / latest) from $IMAGE_REPO" >&2
+              exit 1
+            fi
+            echo "CHOSEN_TAG = $CHOSEN"
+            printf 'export CHOSEN_TAG=%s\n' "$CHOSEN" >> /tmp/deploy_env.sh
         - name: write env file
           script: |
             set -eu
             . /tmp/deploy_env.sh
             ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
               "$CLEAN_USER@$CLEAN_HOST" \
-              "printf 'HI_AGENT_IMAGE=%s\n' '$IMAGE_REPO:$CNB_COMMIT' > $DEPLOY_PATH/.env"
+              "printf 'HI_AGENT_IMAGE=%s\n' '$IMAGE_REPO:$CHOSEN_TAG' > $DEPLOY_PATH/.env && cat $DEPLOY_PATH/.env"
         - name: deploy
           script: |
             set -eu
