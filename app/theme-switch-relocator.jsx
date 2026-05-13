@@ -12,6 +12,11 @@ import { useEffect } from 'react'
  * We intentionally drop the three-state listbox (light/dark/system).
  * `next-themes` still resolves the initial theme from the OS via its
  * default; the visible toggle is light↔dark.
+ *
+ * 注意：sidebar footer 还承载着折叠/展开侧边栏的按钮
+ * (`title="Collapse sidebar"|"Expand sidebar"`)，必须保留。仅移除主题
+ * 切换按钮本身，不要因为"footer 看上去只剩一个孩子"就把整个 footer 删除，
+ * 否则折叠按钮会一并消失，导致用户无法折叠侧边栏。
  */
 export function ThemeSwitchRelocator() {
   useEffect(() => {
@@ -29,12 +34,7 @@ export function ThemeSwitchRelocator() {
       )
 
       for (const btn of buttons) {
-        const footer = btn.closest('.nextra-sidebar-footer')
-        if (footer && footer.children.length === 1) {
-          footer.remove()
-        } else {
-          btn.remove()
-        }
+        btn.remove()
       }
 
       observer?.observe(document.body, { childList: true, subtree: true })
