@@ -18,3 +18,10 @@ public/webcontainer-snapshots
 *.tsbuildinfo
 
 .superpowers/
+
+# SSH / deploy keys — MUST stay out of Git
+cnb_hi_agent_deploy
+cnb_hi_agent_deploy.pub
+id_ed25519*
+id_rsa*
+*.pem

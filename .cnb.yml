@@ -17,6 +17,36 @@ main:
   push:
     - name: build
       <<: *node_ci
+
+    - name: build-and-push-image
+      services:
+        - docker
+      env:
+        IMAGE_REPO: "$CNB_DOCKER_REGISTRY/$CNB_REPO_SLUG_LOWERCASE"
+      stages:
+        - name: docker info
+          script: |
+            set -eu
+            echo "Registry: $CNB_DOCKER_REGISTRY"
+            echo "Repo:     $CNB_REPO_SLUG_LOWERCASE"
+            echo "Commit:   $CNB_COMMIT"
+            echo "Image:    $IMAGE_REPO:latest"
+            echo "Image:    $IMAGE_REPO:$CNB_COMMIT"
+            docker version
+        - name: docker build
+          script: |
+            set -eu
+            docker build \
+              --pull \
+              -t "$IMAGE_REPO:$CNB_COMMIT" \
+              -t "$IMAGE_REPO:latest" \
+              .
+        - name: docker push
+          script: |
+            set -eu
+            docker push "$IMAGE_REPO:$CNB_COMMIT"
+            docker push "$IMAGE_REPO:latest"
+
     - name: update-knowledge-base
       stages:
         - name: update
