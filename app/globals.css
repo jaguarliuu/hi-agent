@@ -2733,3 +2733,942 @@ html:not(.dark) .ha-toast[data-tone='error'] {
     animation: none;
   }
 }
+
+/* =====================================================================
+ * Agent timeline interactive module
+ * ===================================================================== */
+.ha-agent-timeline-entry {
+  margin: 2rem 0;
+}
+
+.ha-agent-timeline-cover {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(280px, 1.1fr);
+  gap: 18px;
+  min-height: 280px;
+  padding: 18px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(47, 111, 235, 0.08), transparent 42%),
+    linear-gradient(315deg, rgba(242, 128, 28, 0.1), transparent 38%),
+    rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+html.dark .ha-agent-timeline-cover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(135deg, rgba(47, 111, 235, 0.16), transparent 42%),
+    linear-gradient(315deg, rgba(242, 128, 28, 0.14), transparent 38%),
+    #0d121e;
+  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.28);
+}
+
+.ha-agent-timeline-cover__content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 8px;
+}
+
+.ha-agent-timeline-cover__eyebrow {
+  margin: 0 0 9px;
+  color: #f2801c;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.ha-agent-timeline-cover h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 25px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+html.dark .ha-agent-timeline-cover h3 {
+  color: #f8fafc;
+}
+
+.ha-agent-timeline-cover__content p:not(.ha-agent-timeline-cover__eyebrow) {
+  margin: 12px 0 0;
+  color: rgba(17, 24, 39, 0.64);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+html.dark .ha-agent-timeline-cover__content p:not(.ha-agent-timeline-cover__eyebrow) {
+  color: rgba(248, 250, 252, 0.68);
+}
+
+.ha-agent-timeline-cover__content button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: fit-content;
+  margin-top: 22px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #111827;
+  border-radius: 8px;
+  background: #111827;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  transition:
+    transform var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    box-shadow var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    background var(--ha-motion-duration-sm) var(--ha-motion-ease-standard);
+}
+
+.ha-agent-timeline-cover__content button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+}
+
+.ha-agent-timeline-cover__preview {
+  position: relative;
+  display: block;
+  min-height: 244px;
+  padding: 18px;
+  border: 1px solid rgba(47, 111, 235, 0.16);
+  border-radius: 8px;
+  background:
+    linear-gradient(rgba(47, 111, 235, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(47, 111, 235, 0.055) 1px, transparent 1px),
+    rgba(255, 255, 255, 0.58);
+  background-size: 34px 34px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+html.dark .ha-agent-timeline-cover__preview {
+  border-color: rgba(147, 197, 253, 0.2);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    rgba(255, 255, 255, 0.045);
+}
+
+.ha-agent-timeline-cover__preview::after {
+  content: '';
+  position: absolute;
+  inset: auto 18px 24px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2f6feb, #16a3a5, #f2801c, #2f9d67);
+  animation: ha-agent-cover-flow 2.4s linear infinite;
+}
+
+.ha-agent-timeline-cover__question {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  max-width: 72%;
+  padding: 9px 12px;
+  border: 1px solid rgba(47, 111, 235, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  color: #2f6feb;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+html.dark .ha-agent-timeline-cover__question {
+  background: rgba(15, 23, 42, 0.78);
+  color: #93c5fd;
+}
+
+.ha-agent-timeline-cover__lanes {
+  position: absolute;
+  inset: 74px 18px 44px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ha-agent-timeline-cover__lanes span {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.68);
+  color: #2f6feb;
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+}
+
+html.dark .ha-agent-timeline-cover__lanes span {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ha-agent-timeline-cover__lanes span::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 1px;
+  height: 18px;
+  background: currentColor;
+  opacity: 0.24;
+}
+
+.ha-agent-timeline-cover__lanes [data-tone='violet'] {
+  color: #6f4bd8;
+}
+
+.ha-agent-timeline-cover__lanes [data-tone='cyan'] {
+  color: #16a3a5;
+}
+
+.ha-agent-timeline-cover__lanes [data-tone='orange'] {
+  color: #f2801c;
+}
+
+.ha-agent-timeline-cover__lanes [data-tone='green'] {
+  color: #2f9d67;
+}
+
+.ha-agent-timeline-cover__lanes [data-tone='navy'] {
+  color: #2763c4;
+}
+
+.ha-agent-timeline-cover__lanes strong {
+  display: block;
+  padding: 0 4px;
+  color: inherit;
+  font-weight: 800;
+}
+
+.ha-agent-timeline-cover__pulse {
+  position: absolute;
+  z-index: 1;
+  left: 9%;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #2f6feb;
+  box-shadow: 0 0 0 8px rgba(47, 111, 235, 0.1);
+  animation: ha-agent-cover-pulse 2.8s var(--ha-motion-ease-standard) infinite;
+}
+
+.ha-agent-timeline-cover__pulse.one {
+  top: 46%;
+}
+
+.ha-agent-timeline-cover__pulse.two {
+  top: 64%;
+  background: #f2801c;
+  box-shadow: 0 0 0 8px rgba(242, 128, 28, 0.1);
+  animation-delay: 520ms;
+}
+
+.ha-agent-timeline-cover__pulse.three {
+  top: 78%;
+  background: #16a3a5;
+  box-shadow: 0 0 0 8px rgba(22, 163, 165, 0.1);
+  animation-delay: 1040ms;
+}
+
+@keyframes ha-agent-cover-flow {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 320px 0;
+  }
+}
+
+@keyframes ha-agent-cover-pulse {
+  0% {
+    transform: translateX(0) scale(0.9);
+    opacity: 0;
+  }
+  16% {
+    opacity: 1;
+  }
+  84% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(82%) scale(1.08);
+    opacity: 0;
+  }
+}
+
+.ha-agent-timeline-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(6, 10, 20, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: ha-agent-modal-fade var(--ha-motion-duration-md) var(--ha-motion-ease-standard);
+}
+
+.ha-agent-timeline-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(1400px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  border-radius: 10px;
+  background: #ffffff;
+  overflow: auto;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.42);
+  animation: ha-agent-modal-rise var(--ha-motion-duration-md) var(--ha-motion-ease-standard);
+}
+
+html.dark .ha-agent-timeline-modal__panel {
+  background: #0d121e;
+}
+
+.ha-agent-timeline-modal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.82);
+  color: #fff;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  transition:
+    transform var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    background var(--ha-motion-duration-sm) var(--ha-motion-ease-standard);
+}
+
+.ha-agent-timeline-modal__close:hover {
+  background: rgba(15, 23, 42, 0.96);
+  transform: translateY(-1px);
+}
+
+.ha-agent-timeline-modal .ha-agent-timeline {
+  margin: 0;
+  background:
+    linear-gradient(135deg, rgba(47, 111, 235, 0.08), transparent 34%),
+    linear-gradient(315deg, rgba(242, 128, 28, 0.08), transparent 32%),
+    #ffffff;
+}
+
+html.dark .ha-agent-timeline-modal .ha-agent-timeline {
+  background:
+    linear-gradient(135deg, rgba(47, 111, 235, 0.14), transparent 36%),
+    linear-gradient(315deg, rgba(242, 128, 28, 0.12), transparent 34%),
+    #0d121e;
+}
+
+@keyframes ha-agent-modal-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ha-agent-modal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 900px) {
+  .ha-agent-timeline-cover {
+    grid-template-columns: 1fr;
+  }
+
+  .ha-agent-timeline-cover__preview {
+    min-height: 250px;
+  }
+
+  .ha-agent-timeline-modal {
+    padding: 12px;
+  }
+
+  .ha-agent-timeline-modal__panel {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+  }
+}
+
+@media (max-width: 640px) {
+  .ha-agent-timeline-cover {
+    padding: 14px;
+  }
+
+  .ha-agent-timeline-cover h3 {
+    font-size: 21px;
+  }
+
+  .ha-agent-timeline-cover__lanes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.ha-agent-timeline {
+  --agent-blue: #2f6feb;
+  --agent-violet: #6f4bd8;
+  --agent-cyan: #16a3a5;
+  --agent-orange: #f2801c;
+  --agent-green: #2f9d67;
+  --agent-navy: #2763c4;
+  --agent-ink: #111827;
+  --agent-muted: rgba(17, 24, 39, 0.62);
+  --agent-panel: rgba(255, 255, 255, 0.92);
+  --agent-border: rgba(17, 24, 39, 0.1);
+
+  position: relative;
+  width: 100%;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid var(--agent-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(47, 111, 235, 0.06), transparent 34%),
+    linear-gradient(315deg, rgba(242, 128, 28, 0.08), transparent 32%),
+    var(--agent-panel);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+  color: var(--agent-ink);
+  overflow: hidden;
+}
+
+html.dark .ha-agent-timeline {
+  --agent-ink: #f8fafc;
+  --agent-muted: rgba(248, 250, 252, 0.64);
+  --agent-panel: rgba(13, 18, 30, 0.86);
+  --agent-border: rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(135deg, rgba(47, 111, 235, 0.14), transparent 36%),
+    linear-gradient(315deg, rgba(242, 128, 28, 0.12), transparent 34%),
+    #0d121e;
+  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.28);
+}
+
+.ha-agent-timeline__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.ha-agent-timeline__eyebrow {
+  margin: 0 0 7px;
+  color: var(--agent-orange);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.ha-agent-timeline h3,
+.ha-agent-timeline h4,
+.ha-agent-timeline p {
+  margin: 0;
+}
+
+.ha-agent-timeline h3 {
+  font-size: 24px;
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.ha-agent-timeline__header p:not(.ha-agent-timeline__eyebrow) {
+  max-width: 650px;
+  margin-top: 8px;
+  color: var(--agent-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.ha-agent-timeline__controls {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.ha-agent-timeline__controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--agent-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--agent-ink);
+  cursor: pointer;
+  transition:
+    transform var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    border-color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    background var(--ha-motion-duration-sm) var(--ha-motion-ease-standard);
+}
+
+html.dark .ha-agent-timeline__controls button {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ha-agent-timeline__controls button:hover {
+  border-color: rgba(47, 111, 235, 0.38);
+  background: rgba(47, 111, 235, 0.08);
+  transform: translateY(-1px);
+}
+
+.ha-agent-timeline__controls button:active {
+  transform: scale(0.96);
+}
+
+.ha-agent-timeline__controls .is-primary {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+
+html.dark .ha-agent-timeline__controls .is-primary {
+  background: #f8fafc;
+  color: #0d121e;
+  border-color: #f8fafc;
+}
+
+.ha-agent-timeline__body {
+  display: grid;
+  grid-template-columns: minmax(680px, 1fr) minmax(250px, 0.34fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.ha-agent-timeline__stage {
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.ha-agent-timeline__lanes {
+  display: grid;
+  min-width: 1064px;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ha-agent-timeline__lane-card {
+  position: relative;
+  min-height: 82px;
+  padding: 12px 10px;
+  border: 1px solid var(--agent-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  text-align: center;
+  transition:
+    transform var(--ha-motion-duration-md) var(--ha-motion-ease-standard),
+    border-color var(--ha-motion-duration-md) var(--ha-motion-ease-standard),
+    box-shadow var(--ha-motion-duration-md) var(--ha-motion-ease-standard);
+}
+
+html.dark .ha-agent-timeline__lane-card {
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.ha-agent-timeline__lane-card[data-active='true'] {
+  transform: translateY(-2px);
+  border-color: currentColor;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+}
+
+.ha-agent-timeline__lane-card[data-tone='blue'] {
+  color: var(--agent-blue);
+}
+
+.ha-agent-timeline__lane-card[data-tone='violet'] {
+  color: var(--agent-violet);
+}
+
+.ha-agent-timeline__lane-card[data-tone='cyan'] {
+  color: var(--agent-cyan);
+}
+
+.ha-agent-timeline__lane-card[data-tone='orange'] {
+  color: var(--agent-orange);
+}
+
+.ha-agent-timeline__lane-card[data-tone='green'] {
+  color: var(--agent-green);
+}
+
+.ha-agent-timeline__lane-card[data-tone='navy'] {
+  color: var(--agent-navy);
+}
+
+.ha-agent-timeline__lane-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 7px;
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, currentColor 0 48%, transparent 48%),
+    radial-gradient(circle at 70% 28%, currentColor 0 19%, transparent 20%),
+    rgba(255, 255, 255, 0.76);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 26%, transparent);
+}
+
+html.dark .ha-agent-timeline__lane-icon {
+  background:
+    linear-gradient(135deg, currentColor 0 48%, transparent 48%),
+    radial-gradient(circle at 70% 28%, currentColor 0 19%, transparent 20%),
+    rgba(255, 255, 255, 0.08);
+}
+
+.ha-agent-timeline__lane-card strong {
+  display: block;
+  color: var(--agent-ink);
+  font-size: 13px;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.ha-agent-timeline__lane-card small {
+  display: block;
+  margin-top: 4px;
+  color: var(--agent-muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.ha-agent-timeline__canvas {
+  position: relative;
+  min-width: 1064px;
+  height: 560px;
+  border: 1px solid var(--agent-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(rgba(47, 111, 235, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(47, 111, 235, 0.045) 1px, transparent 1px),
+    rgba(255, 255, 255, 0.46);
+  background-size: 36px 36px;
+}
+
+html.dark .ha-agent-timeline__canvas {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    rgba(255, 255, 255, 0.035);
+}
+
+.ha-agent-timeline__canvas svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.ha-agent-timeline__lifeline {
+  stroke: rgba(47, 111, 235, 0.26);
+  stroke-width: 1.2;
+  stroke-dasharray: 5 8;
+}
+
+html.dark .ha-agent-timeline__lifeline {
+  stroke: rgba(147, 197, 253, 0.24);
+}
+
+.ha-agent-timeline__step path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  opacity: 0.2;
+  transition:
+    opacity var(--ha-motion-duration-md) var(--ha-motion-ease-standard),
+    stroke-width var(--ha-motion-duration-md) var(--ha-motion-ease-standard);
+}
+
+.ha-agent-timeline__step[data-visited='true'] path {
+  opacity: 0.52;
+}
+
+.ha-agent-timeline__step[data-active='true'] path {
+  opacity: 1;
+  stroke-width: 3.4;
+  stroke-dasharray: 12 8;
+  animation: ha-agent-flow 900ms linear infinite;
+}
+
+.ha-agent-timeline__step circle {
+  fill: var(--agent-panel);
+  stroke: currentColor;
+  stroke-width: 2.5;
+  opacity: 0.42;
+  transition:
+    opacity var(--ha-motion-duration-md) var(--ha-motion-ease-standard),
+    r var(--ha-motion-duration-md) var(--ha-motion-ease-standard),
+    fill var(--ha-motion-duration-md) var(--ha-motion-ease-standard);
+}
+
+.ha-agent-timeline__step[data-visited='true'] circle {
+  opacity: 0.9;
+}
+
+.ha-agent-timeline__step[data-active='true'] circle {
+  fill: currentColor;
+  opacity: 1;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, currentColor 42%, transparent));
+}
+
+.ha-agent-timeline__step text {
+  fill: currentColor;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.ha-agent-timeline__step[data-active='true'] text:first-of-type {
+  fill: #fff;
+}
+
+.ha-agent-timeline__step-label {
+  fill: var(--agent-ink) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  opacity: 0.34;
+  transition: opacity var(--ha-motion-duration-md) var(--ha-motion-ease-standard);
+}
+
+.ha-agent-timeline__step[data-visited='true'] .ha-agent-timeline__step-label {
+  opacity: 0.72;
+}
+
+.ha-agent-timeline__step[data-active='true'] .ha-agent-timeline__step-label {
+  opacity: 1;
+}
+
+@keyframes ha-agent-flow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+.ha-agent-timeline__inspector {
+  position: relative;
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--agent-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  overflow: hidden;
+}
+
+html.dark .ha-agent-timeline__inspector {
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.ha-agent-timeline__inspector::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--agent-blue);
+}
+
+.ha-agent-timeline__inspector[data-tone='violet']::before {
+  background: var(--agent-violet);
+}
+
+.ha-agent-timeline__inspector[data-tone='cyan']::before {
+  background: var(--agent-cyan);
+}
+
+.ha-agent-timeline__inspector[data-tone='orange']::before {
+  background: var(--agent-orange);
+}
+
+.ha-agent-timeline__inspector[data-tone='green']::before {
+  background: var(--agent-green);
+}
+
+.ha-agent-timeline__inspector[data-tone='navy']::before {
+  background: var(--agent-navy);
+}
+
+.ha-agent-timeline__counter {
+  width: fit-content;
+  padding: 5px 8px;
+  border: 1px solid var(--agent-border);
+  border-radius: 8px;
+  color: var(--agent-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ha-agent-timeline h4 {
+  font-size: 19px;
+  line-height: 1.28;
+  letter-spacing: 0;
+}
+
+.ha-agent-timeline__subtitle {
+  color: var(--agent-orange);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.ha-agent-timeline__inspector > p:not(.ha-agent-timeline__subtitle),
+.ha-agent-timeline__note p {
+  color: var(--agent-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.ha-agent-timeline__note {
+  margin-top: auto;
+  padding: 12px;
+  border: 1px solid rgba(47, 111, 235, 0.14);
+  border-radius: 8px;
+  background: rgba(47, 111, 235, 0.06);
+}
+
+html.dark .ha-agent-timeline__note {
+  background: rgba(47, 111, 235, 0.12);
+}
+
+.ha-agent-timeline__note span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--agent-ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ha-agent-timeline__phases {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.ha-agent-timeline__phases button {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--agent-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.64);
+  color: var(--agent-muted);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    border-color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    background var(--ha-motion-duration-sm) var(--ha-motion-ease-standard),
+    color var(--ha-motion-duration-sm) var(--ha-motion-ease-standard);
+}
+
+html.dark .ha-agent-timeline__phases button {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.ha-agent-timeline__phases button:hover,
+.ha-agent-timeline__phases button[data-active='true'] {
+  border-color: rgba(47, 111, 235, 0.42);
+  background: rgba(47, 111, 235, 0.08);
+  color: var(--agent-ink);
+  transform: translateY(-1px);
+}
+
+.ha-agent-timeline__phases span,
+.ha-agent-timeline__phases small {
+  display: block;
+  letter-spacing: 0;
+}
+
+.ha-agent-timeline__phases span {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.ha-agent-timeline__phases small {
+  margin-top: 5px;
+  color: var(--agent-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+@media (max-width: 1180px) {
+  .ha-agent-timeline__body {
+    grid-template-columns: 1fr;
+  }
+
+  .ha-agent-timeline__inspector {
+    min-height: auto;
+  }
+
+  .ha-agent-timeline__phases {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .ha-agent-timeline {
+    padding: 14px;
+  }
+
+  .ha-agent-timeline__header {
+    flex-direction: column;
+  }
+
+  .ha-agent-timeline h3 {
+    font-size: 21px;
+  }
+
+  .ha-agent-timeline__controls button {
+    width: 38px;
+    height: 36px;
+  }
+
+  .ha-agent-timeline__phases {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ha-agent-timeline__step[data-active='true'] path {
+    animation: none;
+  }
+}

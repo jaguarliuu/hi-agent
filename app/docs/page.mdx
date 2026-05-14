@@ -6,6 +6,7 @@ import { Callout, Cards } from 'nextra/components'
 import Image from 'next/image'
 import { withBase } from '../lib/base-path'
 import { ZoomableImage } from '../lib/zoomable-image'
+import { AgentTimelineInteractive } from '../lib/agent-timeline-interactive'
 
 ## 课程简介
 
@@ -58,12 +59,7 @@ import { ZoomableImage } from '../lib/zoomable-image'
 
 表面上看，这只是一句很普通的提问。但在 OpenClaw 背后，一个完整的 Agent 流程已经启动了。
 
-<ZoomableImage
-    src={withBase('/images/common/agent-timeline.png')}
-    alt="Agent Loop 流程图"
-    width={960}
-    height={540}
-/>
+<AgentTimelineInteractive />
 
 
 1. **首先，消息会进入 Chat 层**：系统要先知道：这句话是谁发来的，来自哪个会话，要交给哪个 Agent 处理。这里的“多比”不是一个简单昵称，它对应的是一个具体的 Agent。这个 Agent 有自己的身份、配置、模型、工具权限、记忆和工作空间。

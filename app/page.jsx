@@ -76,7 +76,7 @@ export default function HomePage() {
             七个模块，把你从"会调 API"带到"能造 Agent"。
           </p>
           <div className="ha-cta-row ha-reveal" style={{ '--i': 3 }}>
-            <Link href="/docs/chat" className="ha-btn ha-btn-primary">
+            <Link href="/docs" className="ha-btn ha-btn-primary">
               开始学习 <span aria-hidden className="ha-btn-arrow">→</span>
             </Link>
             <Link href="/docs" className="ha-btn ha-btn-ghost">
