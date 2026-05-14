@@ -21,6 +21,7 @@ const {
   prepareSectionWorkspaceMock,
   readWorkspaceFileMock,
   runManifestCommandMock,
+  runStartupCommandsMock,
   writeWorkspaceFileMock,
   ensureInteractiveShellMock,
   teardownInteractiveShellMock
@@ -31,6 +32,7 @@ const {
   prepareSectionWorkspaceMock: vi.fn(),
   readWorkspaceFileMock: vi.fn(),
   runManifestCommandMock: vi.fn(),
+  runStartupCommandsMock: vi.fn(),
   writeWorkspaceFileMock: vi.fn(),
   ensureInteractiveShellMock: vi.fn(),
   teardownInteractiveShellMock: vi.fn()
@@ -62,6 +64,7 @@ vi.mock('@/app/lib/playground/webcontainer-manager', () => ({
   prepareSectionWorkspace: prepareSectionWorkspaceMock,
   readWorkspaceFile: readWorkspaceFileMock,
   runManifestCommand: runManifestCommandMock,
+  runStartupCommands: runStartupCommandsMock,
   writeWorkspaceFile: writeWorkspaceFileMock,
   ensureInteractiveShell: ensureInteractiveShellMock,
   teardownInteractiveShell: teardownInteractiveShellMock
@@ -231,6 +234,7 @@ describe('PlaygroundDrawer', () => {
     prepareSectionWorkspaceMock.mockResolvedValue(undefined);
     readWorkspaceFileMock.mockResolvedValue("console.log('hello')");
     runManifestCommandMock.mockResolvedValue('npm run chat');
+    runStartupCommandsMock.mockResolvedValue(undefined);
     writeWorkspaceFileMock.mockResolvedValue(undefined);
     ensureInteractiveShellMock.mockResolvedValue({
       process: {},

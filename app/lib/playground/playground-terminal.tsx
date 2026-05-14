@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useEffect, useImperativeHandle, useRef } from 'react';
+import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import {
   ensureInteractiveShell,
+  ensureManifestInteractiveShell,
   teardownInteractiveShell,
   type InteractiveShellHandle
 } from './webcontainer-manager';
+import type { PlaygroundManifest } from './manifest-schema';
 import { usePlaygroundTheme, type PlaygroundTheme } from './use-playground-theme';
 
 const XTERM_THEMES: Record<PlaygroundTheme, {
@@ -40,12 +42,14 @@ export interface PlaygroundTerminalHandle {
 }
 
 interface PlaygroundTerminalProps {
+  manifest: PlaygroundManifest | null;
   sectionId: string | null;
   status: string;
   handleRef?: React.MutableRefObject<PlaygroundTerminalHandle | null>;
 }
 
 export function PlaygroundTerminal({
+  manifest,
   sectionId,
   status,
   handleRef
@@ -57,6 +61,7 @@ export function PlaygroundTerminal({
   const dataDisposableRef = useRef<{ dispose: () => void } | null>(null);
   const outputReaderRef = useRef<ReadableStreamDefaultReader<string> | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const [interactiveError, setInteractiveError] = useState<string | null>(null);
   const theme = usePlaygroundTheme();
   const themeRef = useRef<PlaygroundTheme>(theme);
   themeRef.current = theme;
@@ -141,7 +146,9 @@ export function PlaygroundTerminal({
       const term = xtermRef.current;
       if (!term) return;
 
-      const shell = await ensureInteractiveShell(sectionId);
+      const shell = manifest
+        ? await ensureManifestInteractiveShell(manifest)
+        : await ensureInteractiveShell(sectionId);
       if (cancelled) return;
 
       shellRef.current = shell;
@@ -151,7 +158,10 @@ export function PlaygroundTerminal({
       dataDisposableRef.current = term.onData(async (data) => {
         try {
           await shell.input.write(data);
-        } catch {}
+          setInteractiveError(null);
+        } catch {
+          setInteractiveError('Terminal input failed. Restart the playground and try again.');
+        }
       });
 
       try {
@@ -170,7 +180,13 @@ export function PlaygroundTerminal({
               term.write(value);
             }
           }
-        } catch {}
+        } catch {
+          if (!cancelled) {
+            setInteractiveError(
+              'Terminal output failed. Restart the playground and try again.'
+            );
+          }
+        }
       })();
     })();
 
@@ -184,7 +200,7 @@ export function PlaygroundTerminal({
       outputReaderRef.current = null;
       shellRef.current = null;
     };
-  }, [sectionId, status]);
+  }, [manifest, sectionId, status]);
 
   useEffect(() => {
     return () => {
@@ -215,6 +231,11 @@ export function PlaygroundTerminal({
         className="ha-playground-terminal-host"
         onClick={() => xtermRef.current?.focus()}
       />
+      {interactiveError ? (
+        <p className="ha-playground-terminal-error" role="alert">
+          {interactiveError}
+        </p>
+      ) : null}
     </section>
   );
 }

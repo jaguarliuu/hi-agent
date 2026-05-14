@@ -6,6 +6,9 @@ const IGNORED_DIRECTORIES = new Set(['.git', '.next', 'node_modules', 'out']);
 let bootPromise: Promise<WebContainer> | null = null;
 let mountedSectionId: string | null = null;
 let preparedSectionId: string | null = null;
+let startupShell: InteractiveShellHandle | null = null;
+let startupKey: string | null = null;
+let activeShellEnvKey: string | null = null;
 
 export interface InteractiveShellHandle {
   process: WebContainerProcess;
@@ -25,6 +28,51 @@ async function fetchSnapshot(url: string) {
   }
 
   return response.arrayBuffer();
+}
+
+function getManifestEnv(manifest: PlaygroundManifest) {
+  const env: Record<string, string> = {};
+  const source = globalThis.process?.env;
+
+  for (const name of manifest.startup.env) {
+    const value = source?.[name];
+    if (typeof value === 'string' && value.length > 0) {
+      env[name] = value;
+    }
+  }
+
+  return env;
+}
+
+function getSpawnOptionsEnv(manifest: PlaygroundManifest) {
+  const env = getManifestEnv(manifest);
+  return Object.keys(env).length > 0 ? env : undefined;
+}
+
+function getEnvKey(env: Record<string, string> | undefined) {
+  if (!env) {
+    return '';
+  }
+
+  return Object.keys(env)
+    .sort()
+    .map((name) => `${name}=${env[name]}`)
+    .join('\n');
+}
+
+function getStartupKey(sectionId: string, env: Record<string, string> | undefined) {
+  return `${sectionId}\n${getEnvKey(env)}`;
+}
+
+function resetStartupState(handle?: InteractiveShellHandle) {
+  if (!handle || startupShell === handle) {
+    startupShell = null;
+    startupKey = null;
+  }
+}
+
+function commandToLine(command: PlaygroundManifest['startup']['runCommands'][number]) {
+  return [command.cmd, ...command.args].join(' ');
 }
 
 export async function getWebcontainer() {
@@ -49,6 +97,7 @@ export async function mountSectionWorkspace(manifest: PlaygroundManifest) {
   await webcontainer.mount(snapshot);
   mountedSectionId = manifest.id;
   preparedSectionId = null;
+  resetStartupState();
   return webcontainer;
 }
 
@@ -56,9 +105,11 @@ export async function prepareSectionWorkspace(manifest: PlaygroundManifest) {
   const webcontainer = await mountSectionWorkspace(manifest);
 
   if (preparedSectionId !== manifest.id) {
+    const env = getSpawnOptionsEnv(manifest);
     for (const command of manifest.startup.installCommands) {
       const process = await webcontainer.spawn(command.cmd, command.args, {
-        output: true
+        output: true,
+        ...(env ? { env } : {})
       });
       const exitCode = await process.exit;
       if (exitCode !== 0) {
@@ -131,15 +182,40 @@ export async function runManifestCommand(
     .map((part) => part)
     .join(' ');
 
-  const shell = await ensureInteractiveShell(manifest.id);
+  const shell = await ensureManifestInteractiveShell(manifest);
   await shell.input.write(`${commandLine}\n`);
   return commandLine;
 }
 
-async function spawnShell(sectionId: string): Promise<InteractiveShellHandle> {
+export async function runStartupCommands(manifest: PlaygroundManifest) {
+  await prepareSectionWorkspace(manifest);
+  const env = getSpawnOptionsEnv(manifest);
+  const nextStartupKey = getStartupKey(manifest.id, env);
+  const shell = await ensureInteractiveShell(manifest.id, env);
+
+  if (startupShell === shell && startupKey === nextStartupKey) {
+    return;
+  }
+
+  for (const command of manifest.startup.runCommands) {
+    await shell.input.write(`${commandToLine(command)}\n`);
+  }
+  startupShell = shell;
+  startupKey = nextStartupKey;
+}
+
+export async function ensureManifestInteractiveShell(manifest: PlaygroundManifest) {
+  return ensureInteractiveShell(manifest.id, getSpawnOptionsEnv(manifest));
+}
+
+async function spawnShell(
+  sectionId: string,
+  env?: Record<string, string>
+): Promise<InteractiveShellHandle> {
   const webcontainer = await getWebcontainer();
   const process = await webcontainer.spawn('jsh', {
-    terminal: { cols: 80, rows: 24 }
+    terminal: { cols: 80, rows: 24 },
+    ...(env ? { env } : {})
   });
 
   const input = process.input.getWriter();
@@ -165,26 +241,39 @@ async function spawnShell(sectionId: string): Promise<InteractiveShellHandle> {
     if (activeShell === handle) {
       activeShell = null;
       activeShellSectionId = null;
+      activeShellEnvKey = null;
     }
+    resetStartupState(handle);
   });
 
   activeShell = handle;
   activeShellSectionId = sectionId;
+  activeShellEnvKey = getEnvKey(env);
   return handle;
 }
 
-export async function ensureInteractiveShell(sectionId: string) {
-  if (activeShell && activeShellSectionId === sectionId) {
+export async function ensureInteractiveShell(
+  sectionId: string,
+  env?: Record<string, string>
+) {
+  const envKey = getEnvKey(env);
+  if (
+    activeShell &&
+    activeShellSectionId === sectionId &&
+    activeShellEnvKey === envKey
+  ) {
     return activeShell;
   }
 
   if (activeShell) {
+    resetStartupState(activeShell);
     await activeShell.dispose();
     activeShell = null;
     activeShellSectionId = null;
+    activeShellEnvKey = null;
   }
 
-  return spawnShell(sectionId);
+  return spawnShell(sectionId, env);
 }
 
 export async function teardownInteractiveShell() {
@@ -192,5 +281,7 @@ export async function teardownInteractiveShell() {
   const handle = activeShell;
   activeShell = null;
   activeShellSectionId = null;
+  activeShellEnvKey = null;
+  resetStartupState(handle);
   await handle.dispose();
 }

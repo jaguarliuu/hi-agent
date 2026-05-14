@@ -26,12 +26,12 @@ import {
   type PlaygroundState
 } from './playground-state';
 import {
-  ensureInteractiveShell,
   getWebcontainer,
   listWorkspaceFiles,
   prepareSectionWorkspace,
   readWorkspaceFile,
   runManifestCommand,
+  runStartupCommands,
   teardownInteractiveShell,
   writeWorkspaceFile
 } from './webcontainer-manager';
@@ -278,7 +278,7 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
         return;
       }
 
-      await ensureInteractiveShell(sectionId);
+      await runStartupCommands(nextManifest);
 
       if (!isActiveRequest(requestId)) {
         return;

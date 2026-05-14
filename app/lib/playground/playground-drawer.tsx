@@ -215,6 +215,7 @@ export function PlaygroundDrawer({
 
             {terminalVisible ? (
               <PlaygroundTerminal
+                manifest={manifest}
                 sectionId={state.sectionId}
                 status={state.status}
               />

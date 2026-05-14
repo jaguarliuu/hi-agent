@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PlaygroundManifest } from '@/app/lib/playground/manifest-schema';
 
 const mountMock = vi.fn();
@@ -10,6 +10,7 @@ const writeFileMock = vi.fn();
 const bootMock = vi.fn();
 const loadCachedWorkspaceMock = vi.fn();
 const saveCachedWorkspaceMock = vi.fn();
+const originalEnv = process.env;
 let webcontainerMock: {
   mount: typeof mountMock;
   spawn: typeof spawnMock;
@@ -59,6 +60,12 @@ describe('prepareSectionWorkspace', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    process.env = {
+      ...originalEnv,
+      OPENAI_API_KEY: 'test-key',
+      OPENAI_BASE_URL: 'https://api.test/v1',
+      IGNORED_ENV: 'ignored'
+    };
 
     mountMock.mockResolvedValue(undefined);
     spawnMock.mockResolvedValue({
@@ -89,6 +96,123 @@ describe('prepareSectionWorkspace', () => {
         arrayBuffer: () => Promise.resolve(new ArrayBuffer(8))
       })
     );
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it('passes only manifest-declared environment variables to startup processes', async () => {
+    const { prepareSectionWorkspace } = await import('@/app/lib/playground/webcontainer-manager');
+    const manifest = {
+      ...createManifest('labs-01-webcontainers-pilot'),
+      startup: {
+        installCommands: [{ cmd: 'npm', args: ['install'] }],
+        runCommands: [],
+        env: ['OPENAI_API_KEY', 'OPENAI_BASE_URL']
+      }
+    } satisfies PlaygroundManifest;
+
+    await prepareSectionWorkspace(manifest);
+
+    expect(spawnMock).toHaveBeenCalledWith('npm', ['install'], {
+      output: true,
+      env: {
+        OPENAI_API_KEY: 'test-key',
+        OPENAI_BASE_URL: 'https://api.test/v1'
+      }
+    });
+  });
+
+  it('starts the interactive shell with manifest env and dispatches startup run commands once', async () => {
+    const inputWriteMock = vi.fn().mockResolvedValue(undefined);
+    spawnMock.mockResolvedValueOnce({
+      exit: new Promise(() => {}),
+      input: {
+        getWriter: () => ({
+          write: inputWriteMock,
+          close: vi.fn().mockResolvedValue(undefined)
+        })
+      },
+      output: new ReadableStream(),
+      resize: vi.fn(),
+      kill: vi.fn()
+    });
+    const { runStartupCommands, teardownInteractiveShell } = await import(
+      '@/app/lib/playground/webcontainer-manager'
+    );
+    const manifest = {
+      ...createManifest('labs-01-webcontainers-pilot'),
+      startup: {
+        installCommands: [],
+        runCommands: [{ cmd: 'npm', args: ['run', 'chat'] }],
+        env: ['OPENAI_API_KEY']
+      }
+    } satisfies PlaygroundManifest;
+
+    try {
+      await runStartupCommands(manifest);
+      await runStartupCommands(manifest);
+
+      expect(spawnMock).toHaveBeenCalledWith('jsh', {
+        terminal: { cols: 80, rows: 24 },
+        env: { OPENAI_API_KEY: 'test-key' }
+      });
+      expect(inputWriteMock).toHaveBeenCalledTimes(1);
+      expect(inputWriteMock).toHaveBeenCalledWith('npm run chat\n');
+    } finally {
+      await teardownInteractiveShell();
+    }
+  });
+
+  it('reruns startup commands after tearing down the interactive shell', async () => {
+    const firstInputWriteMock = vi.fn().mockResolvedValue(undefined);
+    const firstKillMock = vi.fn();
+    const secondInputWriteMock = vi.fn().mockResolvedValue(undefined);
+    spawnMock
+      .mockResolvedValueOnce({
+        exit: new Promise(() => {}),
+        input: {
+          getWriter: () => ({
+            write: firstInputWriteMock,
+            close: vi.fn().mockResolvedValue(undefined)
+          })
+        },
+        output: new ReadableStream(),
+        resize: vi.fn(),
+        kill: firstKillMock
+      })
+      .mockResolvedValueOnce({
+        exit: new Promise(() => {}),
+        input: {
+          getWriter: () => ({
+            write: secondInputWriteMock,
+            close: vi.fn().mockResolvedValue(undefined)
+          })
+        },
+        output: new ReadableStream(),
+        resize: vi.fn(),
+        kill: vi.fn()
+      });
+    const { runStartupCommands, teardownInteractiveShell } = await import(
+      '@/app/lib/playground/webcontainer-manager'
+    );
+    const manifest = {
+      ...createManifest('labs-01-webcontainers-pilot'),
+      startup: {
+        installCommands: [],
+        runCommands: [{ cmd: 'npm', args: ['run', 'chat'] }],
+        env: ['OPENAI_API_KEY']
+      }
+    } satisfies PlaygroundManifest;
+
+    await runStartupCommands(manifest);
+    await teardownInteractiveShell();
+    await runStartupCommands(manifest);
+
+    expect(firstKillMock).toHaveBeenCalledTimes(1);
+    expect(firstInputWriteMock).toHaveBeenCalledWith('npm run chat\n');
+    expect(secondInputWriteMock).toHaveBeenCalledWith('npm run chat\n');
   });
 
   it('does not remount or reinstall when preparing the same mounted section twice', async () => {
