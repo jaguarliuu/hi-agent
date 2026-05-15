@@ -1,34 +1,53 @@
-.node_ci: &node_ci
-  docker:
-    image: node:20
-    volumes:
-      - /root/.npm:copy-on-write
-  env:
-    NEXT_TELEMETRY_DISABLED: "1"
-  stages:
-    - name: install
-      script: npm ci
-    - name: test
-      script: npm test
-    - name: build
-      script: NODE_ENV=production npm run build
-
 main:
   push:
-    - name: build
-      <<: *node_ci
-
-    - name: build-and-push-image
-      needs:
-        - build
+    # =====================================================================
+    # 单 Pipeline 串行流水线
+    #
+    # 关键背景：CNB 的语义是「同一 event 下多个 pipeline = 并行；同一 pipeline
+    # 内的多个 stage = 串行」，不存在 GitHub Actions 那样的 `needs` 关键字。
+    # 此前把 build / build-and-push-image / deploy-to-server 写成 3 个并列
+    # pipeline，导致 deploy 不等 push 完成就先跑（用的还是带 docker service 的
+    # 慢 runner），从而部署到服务器上的「最新镜像」其实是上次构建残留的旧镜像。
+    #
+    # 此处统一为单 pipeline + 多 stage，自上而下严格串行：
+    #   1. install / test / build      ← 校验代码并产出 out/
+    #   2. docker build / docker push  ← 把当前 commit 打包并推到 registry
+    #   3. deploy-to-server            ← ssh 远端拉取新镜像并强制重建容器
+    # =====================================================================
+    - name: build-test-deploy
+      docker:
+        # 同一 pipeline 共享一个 runner，统一用 node:20。
+        # node:20 基于 debian-slim，自带 apt，可以在 deploy stage 临时安装 ssh
+        # 客户端。docker build/push 通过下面的 `services: docker` 注入 daemon。
+        image: node:20
+        volumes:
+          - /root/.npm:copy-on-write
       services:
+        # docker service 给本 pipeline 注入 dockerd，使 docker CLI 可用。
         - docker
       env:
+        NEXT_TELEMETRY_DISABLED: "1"
         IMAGE_REPO: "$CNB_DOCKER_REGISTRY/$CNB_REPO_SLUG_LOWERCASE"
+        IMAGE_REGISTRY: "docker.cnb.cool"
+        DEPLOY_PATH: "/opt/hi-agent"
       imports:
-        # 引用密钥仓库里的密钥文件
+        # 部署阶段需要的密钥（DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY）。
+        # 在 pipeline 顶层 import 一次，所有 stage 都可见。
         - https://cnb.cool/jaguarliu.cool/keys/-/blob/main/git_token.yml
       stages:
+        # -----------------------------------------------------------------
+        # Stage 1：Node 代码验证（依赖、单测、产出 Next 静态导出）
+        # -----------------------------------------------------------------
+        - name: install
+          script: npm ci
+        - name: test
+          script: npm test
+        - name: build
+          script: NODE_ENV=production npm run build
+
+        # -----------------------------------------------------------------
+        # Stage 2：构建并推送 Docker 镜像（必须早于 deploy）
+        # -----------------------------------------------------------------
         - name: docker info
           script: |
             set -eu
@@ -52,23 +71,20 @@ main:
             docker push "$IMAGE_REPO:$CNB_COMMIT"
             docker push "$IMAGE_REPO:latest"
 
-    - name: deploy-to-server
-      needs:
-        - build-and-push-image
-      docker:
-        image: alpine:3.20
-      imports:
-        # 统一从 keys 仓库的 git_token.yml 引入：
-        #   GIT_TOKEN / DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY
-        - https://cnb.cool/jaguarliu.cool/keys/-/blob/main/git_token.yml
-      env:
-        # $CNB_DOCKER_REGISTRY 只在带 docker service 的 runner 里注入，
-        # 普通 alpine runner 里可能为空 —— 这里硬编码成 CNB 制品域名，
-        # 保证 deploy job 永远能拼出正确的镜像路径。
-        IMAGE_REGISTRY: "docker.cnb.cool"
-        IMAGE_REPO: "docker.cnb.cool/$CNB_REPO_SLUG_LOWERCASE"
-        DEPLOY_PATH: "/opt/hi-agent"
-      stages:
+        # -----------------------------------------------------------------
+        # Stage 3：部署到目标服务器
+        #   - 安装 ssh 客户端 → 校验密钥 → 写 ssh key → scp compose 文件
+        #   - choose image tag：远端 docker pull 带重试，确保拉到本次 push 的镜像
+        #   - resolve digest：把 tag 解析成不可变 RepoDigest 写入 .env
+        #   - deploy：force-recreate 重建容器，避免 compose 因 image 引用未变
+        #             而保留旧容器
+        # -----------------------------------------------------------------
+        - name: install ssh client
+          script: |
+            set -eu
+            apt-get update -y
+            apt-get install -y --no-install-recommends openssh-client ca-certificates
+            rm -rf /var/lib/apt/lists/*
         - name: check secrets
           script: |
             set -eu
@@ -88,8 +104,6 @@ main:
             echo "IMAGE_REPO              = [$IMAGE_REPO]"
             echo "Target image (SHA)      = [$IMAGE_REPO:$CNB_COMMIT]"
             echo "Target image (latest)   = [$IMAGE_REPO:latest]"
-        - name: install ssh client
-          script: apk add --no-cache openssh-client curl
         - name: prepare ssh key
           script: |
             set -eu
@@ -118,8 +132,8 @@ main:
           script: |
             set -eu
             . /tmp/deploy_env.sh
-            # Remote pull with retry: some registries have a short
-            # visibility window between 'push' and 'pull'.
+            # 远端 docker pull 带重试：某些 registry 在 push 完成后存在
+            # 短暂的可见性窗口。优先尝试本次 commit tag，再退到 latest。
             CHOSEN=""
             for TAG in "$CNB_COMMIT" latest; do
               for i in 1 2 3 4 5; do
@@ -141,10 +155,9 @@ main:
             echo "CHOSEN_TAG = $CHOSEN"
             printf 'export CHOSEN_TAG=%s\n' "$CHOSEN" >> /tmp/deploy_env.sh
 
-            # 进一步把 tag 解析成 RepoDigest（形如 repo@sha256:xxx），
-            # 让 compose 始终拿到不可变引用——tag 不变但 digest 变化时
-            # compose 会感知到 image 字符串变化并重建容器，从根上杜绝
-            # 「pull 成功但容器仍跑旧镜像」。
+            # 进一步把 tag 解析成 RepoDigest（形如 repo@sha256:xxx），让 compose
+            # 始终拿到不可变引用——tag 不变但 digest 变化时 compose 会感知到
+            # image 字符串变化并重建容器，从根上杜绝「pull 成功但容器仍跑旧镜像」。
             DIGEST="$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
               "$CLEAN_USER@$CLEAN_HOST" \
               "docker image inspect --format '{{index .RepoDigests 0}}' $IMAGE_REPO:$CHOSEN" \
@@ -168,9 +181,9 @@ main:
           script: |
             set -eu
             . /tmp/deploy_env.sh
-            # 重要：使用 --force-recreate 确保即使 .env 里的 image
-            # 引用字符串没变（例如仍然是 :latest），compose 也会用刚拉
-            # 取的最新镜像重建容器，避免「pull 成功但容器仍跑旧镜像」。
+            # 重要：使用 --force-recreate 确保即使 .env 里的 image 引用字符串
+            # 没变（例如仍然是 :latest），compose 也会用刚拉取的最新镜像重建
+            # 容器，避免「pull 成功但容器仍跑旧镜像」。
             ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
               "$CLEAN_USER@$CLEAN_HOST" "
                 set -eu
@@ -181,6 +194,9 @@ main:
                 docker compose ps
               "
 
+    # =====================================================================
+    # 知识库更新流水线（与上面 build-test-deploy 并行执行，互不阻塞）
+    # =====================================================================
     - name: update-knowledge-base
       stages:
         - name: update
@@ -199,4 +215,16 @@ main:
 $:
   pull_request:
     - name: verify
-      <<: *node_ci
+      docker:
+        image: node:20
+        volumes:
+          - /root/.npm:copy-on-write
+      env:
+        NEXT_TELEMETRY_DISABLED: "1"
+      stages:
+        - name: install
+          script: npm ci
+        - name: test
+          script: npm test
+        - name: build
+          script: NODE_ENV=production npm run build
