@@ -10,6 +10,7 @@ import { OpenProjectButton } from './app/lib/open-project-button'
 import { PlaygroundSection } from './app/lib/playground/playground-section'
 import { RunnableCodeBlock } from './app/lib/runnable-code-block'
 import { InteractiveDiagram } from './app/lib/diagrams/interactive-diagram'
+import { AgentCapabilityInteractive } from './app/lib/agent-capability-interactive'
 import { Lane } from './app/lib/diagrams/children/lane'
 import { Phase } from './app/lib/diagrams/children/phase'
 import { Step } from './app/lib/diagrams/children/step'
@@ -120,6 +121,7 @@ export function useMDXComponents(components) {
     CommandBlock,
     OpenProjectButton,
     InteractiveDiagram,
+    AgentCapabilityInteractive,
     Lane,
     Node: DiagramNode,
     Edge: DiagramEdge,
