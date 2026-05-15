@@ -1,17 +1,10 @@
-import type { DiagramSchema, LaneSchema, StepSchema, Tone } from '../types'
+import React from 'react'
+import type { DiagramSchema, LaneSchema, StepSchema } from '../types'
+import { TONE_COLORS } from '../tone'
 
 export type LanesLayoutProps = {
   schema: DiagramSchema
   currentIndex: number
-}
-
-const toneColors: Record<Tone, string> = {
-  blue: '#2f6feb',
-  violet: '#6f4bd8',
-  cyan: '#16a3a5',
-  orange: '#f2801c',
-  green: '#2f9d67',
-  navy: '#2763c4'
 }
 
 function buildLanePositions(lanes: LaneSchema[]): Record<string, number> {
@@ -87,7 +80,7 @@ export function LanesLayout({ schema, currentIndex }: LanesLayoutProps) {
             const visited = isVisited(currentIndex, index)
             const x = laneX[step.to]
             const y = step.y ?? 0
-            const color = toneColors[step.tone]
+            const color = TONE_COLORS[step.tone]
             return (
               <g
                 key={step.id}

@@ -1,19 +1,11 @@
 import React from 'react'
-import type { DiagramSchema, EdgeSchema, NodeSchema, Tone } from '../types'
+import type { DiagramSchema, EdgeSchema, NodeSchema } from '../types'
+import { TONE_COLORS } from '../tone'
 
 export type GraphLayoutProps = { schema: DiagramSchema; currentIndex: number }
 
 const NODE_WIDTH = 140
 const NODE_HEIGHT = 56
-
-const toneColors: Record<Tone, string> = {
-  blue: '#1d4ed8',
-  violet: '#6d28d9',
-  cyan: '#0e7490',
-  orange: '#c2410c',
-  green: '#15803d',
-  navy: '#1e3a8a'
-}
 
 function nodeCenter(node: NodeSchema) {
   return { cx: node.x + NODE_WIDTH / 2, cy: node.y + NODE_HEIGHT / 2 }
@@ -79,7 +71,7 @@ export function GraphLayout({ schema, currentIndex }: GraphLayoutProps) {
       })}
       {nodes.map((node) => {
         const isActive = activeNodeIds.has(node.id)
-        const color = toneColors[node.tone]
+        const color = TONE_COLORS[node.tone]
         return (
           <g
             key={node.id}
