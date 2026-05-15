@@ -7,23 +7,31 @@ import type { DiagramAction, DiagramState } from './use-diagram-state'
 import { LanesLayout } from './layouts/lanes-layout'
 import { GraphLayout } from './layouts/graph-layout'
 
-const openDiagrams = new Set<string>()
-let originalOverflow: string | null = null
-function lock(id: string) {
+const LOCK_COUNT_KEY = 'diagramLockCount'
+const PREV_OVERFLOW_KEY = 'diagramPrevOverflow'
+
+function lockBodyScroll() {
   if (typeof document === 'undefined') return
-  if (openDiagrams.size === 0) {
-    originalOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+  const body = document.body
+  const next = Number(body.dataset[LOCK_COUNT_KEY] ?? '0') + 1
+  if (next === 1) {
+    body.dataset[PREV_OVERFLOW_KEY] = body.style.overflow
+    body.style.overflow = 'hidden'
   }
-  openDiagrams.add(id)
+  body.dataset[LOCK_COUNT_KEY] = String(next)
 }
-function unlock(id: string) {
+function unlockBodyScroll() {
   if (typeof document === 'undefined') return
-  openDiagrams.delete(id)
-  if (openDiagrams.size === 0 && originalOverflow !== null) {
-    document.body.style.overflow = originalOverflow
-    originalOverflow = null
+  const body = document.body
+  const cur = Number(body.dataset[LOCK_COUNT_KEY] ?? '0')
+  const next = Math.max(0, cur - 1)
+  if (next === 0) {
+    body.style.overflow = body.dataset[PREV_OVERFLOW_KEY] ?? ''
+    delete body.dataset[PREV_OVERFLOW_KEY]
+    delete body.dataset[LOCK_COUNT_KEY]
+    return
   }
+  body.dataset[LOCK_COUNT_KEY] = String(next)
 }
 
 function getFocusable(root: HTMLElement): HTMLElement[] {
@@ -63,6 +71,10 @@ export function PlayerShell({
   const activePhase = current?.phase
 
   const phaseLookup = useMemo(() => {
+    // Maps phase.id → first step index that belongs to this phase.
+    // Click on a phase tab always jumps to the FIRST step of that phase,
+    // not "next step in current phase". This is intentional: phase tab is
+    // a section anchor, not a forward-step button.
     const map: Record<string, number> = {}
     phases.forEach((p) => {
       const idx = steps.findIndex((s) => s.phase === p.id)
@@ -73,7 +85,7 @@ export function PlayerShell({
 
   useEffect(() => {
     if (!state.isOpen) return
-    lock(id)
+    lockBodyScroll()
     closeBtnRef.current?.focus()
 
     const onKey = (event: KeyboardEvent) => {
@@ -103,6 +115,11 @@ export function PlayerShell({
         const first = focusables[0]
         const last = focusables[focusables.length - 1]
         const active = document.activeElement as HTMLElement | null
+        if (active && !panelRef.current.contains(active)) {
+          event.preventDefault()
+          first.focus()
+          return
+        }
         if (event.shiftKey && active === first) {
           event.preventDefault()
           last.focus()
@@ -115,7 +132,7 @@ export function PlayerShell({
     window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('keydown', onKey)
-      unlock(id)
+      unlockBodyScroll()
       onReturnFocus()
     }
   }, [state.isOpen, id, dispatch, onReturnFocus])
