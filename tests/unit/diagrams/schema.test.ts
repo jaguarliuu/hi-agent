@@ -78,3 +78,65 @@ describe('parseDiagramSchema', () => {
     ).toThrow()
   })
 })
+
+describe('StepSchema dual-mode (phase-only ／ from-to)', () => {
+  it('accepts phase-only step when phase id matches phases[]', () => {
+    expect(() =>
+      parseDiagramSchema({
+        nodes: [{ id: 'n1', title: 'N1', x: 0, y: 0, tone: 'blue', phase: 'p1' }],
+        phases: [{ id: 'p1', label: 'P1', summary: '' }],
+        steps: [{ id: 1, phase: 'p1', tone: 'blue', title: 'T', detail: 'D' }]
+      })
+    ).not.toThrow()
+  })
+
+  it('rejects phase-only step when phase id does not match phases[]', () => {
+    expect(() =>
+      parseDiagramSchema({
+        nodes: [{ id: 'n1', title: 'N1', x: 0, y: 0, tone: 'blue' }],
+        phases: [{ id: 'p1', label: 'P1', summary: '' }],
+        steps: [{ id: 1, phase: 'pX', tone: 'blue', title: 'T', detail: 'D' }]
+      })
+    ).toThrow(/Unknown phase id: pX/)
+  })
+
+  it('rejects step that has neither phase nor from/to', () => {
+    expect(() =>
+      parseDiagramSchema({
+        nodes: [{ id: 'n1', title: 'N1', x: 0, y: 0, tone: 'blue' }],
+        steps: [{ id: 1, tone: 'blue', title: 'T', detail: 'D' }]
+      })
+    ).toThrow(/must provide either phase or both from\/to/)
+  })
+
+  it('accepts step that has both phase and from/to (phase=highlight group, from/to=connector)', () => {
+    expect(() =>
+      parseDiagramSchema({
+        nodes: [{ id: 'n1', title: 'N1', x: 0, y: 0, tone: 'blue' }],
+        phases: [{ id: 'p1', label: 'P1', summary: '' }],
+        steps: [{ id: 1, phase: 'p1', from: 'n1', to: 'n1', tone: 'blue', title: 'T', detail: 'D' }]
+      })
+    ).not.toThrow()
+  })
+
+  it('rejects step that has only one of from/to', () => {
+    expect(() =>
+      parseDiagramSchema({
+        nodes: [{ id: 'n1', title: 'N1', x: 0, y: 0, tone: 'blue' }],
+        steps: [{ id: 1, from: 'n1', tone: 'blue', title: 'T', detail: 'D' }]
+      })
+    ).toThrow(/from and to must be provided together/)
+  })
+
+  it('keeps backward compat: step with from/to still references lanes/nodes', () => {
+    expect(() =>
+      parseDiagramSchema({
+        nodes: [
+          { id: 'a', title: 'A', x: 0, y: 0, tone: 'blue' },
+          { id: 'b', title: 'B', x: 0, y: 0, tone: 'blue' }
+        ],
+        steps: [{ id: 1, from: 'a', to: 'b', tone: 'blue', title: 'T', detail: 'D' }]
+      })
+    ).not.toThrow()
+  })
+})

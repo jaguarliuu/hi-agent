@@ -33,8 +33,8 @@ const phaseSchema = z.object({
 
 const stepSchema = z.object({
   id: z.union([z.number(), z.string()]),
-  from: z.string().min(1),
-  to: z.string().min(1),
+  from: z.string().min(1).optional(),
+  to: z.string().min(1).optional(),
   y: z.number().optional(),
   phase: z.string().optional(),
   tone: ToneEnum,
@@ -53,24 +53,58 @@ export const diagramZodSchema = z
     steps: z.array(stepSchema).min(1)
   })
   .superRefine((value, ctx) => {
-    const known = new Set<string>()
-    value.lanes?.forEach((l) => known.add(l.id))
-    value.nodes?.forEach((n) => known.add(n.id))
-    if (known.size === 0) return
+    const knownIds = new Set<string>()
+    value.lanes?.forEach((l) => knownIds.add(l.id))
+    value.nodes?.forEach((n) => knownIds.add(n.id))
+    const knownPhases = new Set<string>()
+    value.phases?.forEach((p) => knownPhases.add(p.id))
+
     value.steps.forEach((step, index) => {
-      if (!known.has(step.from)) {
+      const hasPhase = step.phase != null
+      const hasFrom = step.from != null
+      const hasTo = step.to != null
+
+      if (hasFrom !== hasTo) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['steps', index, 'from'],
-          message: `Unknown lane/node id: ${step.from}`
+          path: ['steps', index],
+          message: 'from and to must be provided together'
         })
+        return
       }
-      if (!known.has(step.to)) {
+      if (!hasPhase && !hasFrom) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['steps', index, 'to'],
-          message: `Unknown lane/node id: ${step.to}`
+          path: ['steps', index],
+          message: 'must provide either phase or both from/to'
         })
+        return
+      }
+
+      if (hasPhase) {
+        if (knownPhases.size > 0 && !knownPhases.has(step.phase!)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['steps', index, 'phase'],
+            message: `Unknown phase id: ${step.phase}`
+          })
+        }
+      }
+      if (hasFrom && knownIds.size > 0) {
+        if (!knownIds.has(step.from!)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['steps', index, 'from'],
+            message: `Unknown lane/node id: ${step.from}`
+          })
+        }
+        if (!knownIds.has(step.to!)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['steps', index, 'to'],
+            message: `Unknown lane/node id: ${step.to}`
+          })
+        }
       }
     })
   })

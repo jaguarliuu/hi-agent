@@ -30,8 +30,8 @@ export type PhaseSchema = {
 
 export type StepSchema = {
   id: number | string
-  from: string
-  to: string
+  from?: string
+  to?: string
   y?: number
   phase?: string
   tone: Tone
