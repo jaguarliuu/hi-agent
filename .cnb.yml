@@ -140,23 +140,43 @@ main:
             fi
             echo "CHOSEN_TAG = $CHOSEN"
             printf 'export CHOSEN_TAG=%s\n' "$CHOSEN" >> /tmp/deploy_env.sh
+
+            # 进一步把 tag 解析成 RepoDigest（形如 repo@sha256:xxx），
+            # 让 compose 始终拿到不可变引用——tag 不变但 digest 变化时
+            # compose 会感知到 image 字符串变化并重建容器，从根上杜绝
+            # 「pull 成功但容器仍跑旧镜像」。
+            DIGEST="$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
+              "$CLEAN_USER@$CLEAN_HOST" \
+              "docker image inspect --format '{{index .RepoDigests 0}}' $IMAGE_REPO:$CHOSEN" \
+              2>/dev/null || true)"
+            if [ -n "$DIGEST" ]; then
+              echo "RESOLVED_IMAGE = $DIGEST"
+              printf 'export RESOLVED_IMAGE=%s\n' "$DIGEST" >> /tmp/deploy_env.sh
+            else
+              # 兜底：解析失败时退回到 tag 引用，至少不阻断部署。
+              echo "WARN: failed to resolve digest, fallback to tag reference"
+              printf 'export RESOLVED_IMAGE=%s\n' "$IMAGE_REPO:$CHOSEN" >> /tmp/deploy_env.sh
+            fi
         - name: write env file
           script: |
             set -eu
             . /tmp/deploy_env.sh
             ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
               "$CLEAN_USER@$CLEAN_HOST" \
-              "printf 'HI_AGENT_IMAGE=%s\n' '$IMAGE_REPO:$CHOSEN_TAG' > $DEPLOY_PATH/.env && cat $DEPLOY_PATH/.env"
+              "printf 'HI_AGENT_IMAGE=%s\n' '$RESOLVED_IMAGE' > $DEPLOY_PATH/.env && cat $DEPLOY_PATH/.env"
         - name: deploy
           script: |
             set -eu
             . /tmp/deploy_env.sh
+            # 重要：使用 --force-recreate 确保即使 .env 里的 image
+            # 引用字符串没变（例如仍然是 :latest），compose 也会用刚拉
+            # 取的最新镜像重建容器，避免「pull 成功但容器仍跑旧镜像」。
             ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
               "$CLEAN_USER@$CLEAN_HOST" "
                 set -eu
                 cd $DEPLOY_PATH
                 docker compose pull
-                docker compose up -d
+                docker compose up -d --force-recreate --remove-orphans
                 docker image prune -f
                 docker compose ps
               "

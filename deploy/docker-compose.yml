@@ -1,6 +1,9 @@
 services:
   hi-agent:
-    image: ${HI_AGENT_IMAGE:-docker.cnb.cool/jaguarliu.cool/hi-agent:latest}
+    # HI_AGENT_IMAGE 必须在同目录 .env 中由部署流水线写入。
+    # 使用 `${VAR:?msg}` 而不是 `${VAR:-default}`，避免 .env 缺失或写入
+    # 失败时 compose 静默回退到固定 :latest，造成「容器永远不更新」。
+    image: ${HI_AGENT_IMAGE:?HI_AGENT_IMAGE must be set in .env (deploy pipeline writes it)}
     container_name: hi-agent
     restart: unless-stopped
     ports:
