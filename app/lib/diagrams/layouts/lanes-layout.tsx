@@ -15,6 +15,7 @@ function buildLanePositions(lanes: LaneSchema[]): Record<string, number> {
 }
 
 function buildLinePath(step: StepSchema, laneX: Record<string, number>) {
+  if (!step.from || !step.to) return ''
   const startX = laneX[step.from]
   const endX = laneX[step.to]
   const y = step.y ?? 0
@@ -76,6 +77,7 @@ export function LanesLayout({ schema, currentIndex }: LanesLayoutProps) {
             />
           ))}
           {steps.map((step, index) => {
+            if (!step.from || !step.to) return null
             const active = index === currentIndex
             const visited = isVisited(currentIndex, index)
             const x = laneX[step.to]

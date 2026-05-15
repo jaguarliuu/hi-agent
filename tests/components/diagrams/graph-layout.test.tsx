@@ -87,3 +87,41 @@ describe('GraphLayout', () => {
     expect(activeNodes).toHaveLength(0)
   })
 })
+
+describe('GraphLayout phase-based highlighting', () => {
+  it('highlights all nodes whose phase matches step.phase', () => {
+    const schema: DiagramSchema = {
+      nodes: [
+        { id: 'a1', title: 'A1', x: 0, y: 0, tone: 'blue', phase: 'p1' },
+        { id: 'a2', title: 'A2', x: 100, y: 0, tone: 'blue', phase: 'p1' },
+        { id: 'b1', title: 'B1', x: 200, y: 0, tone: 'orange', phase: 'p2' }
+      ],
+      edges: [],
+      phases: [
+        { id: 'p1', label: 'P1', summary: '' },
+        { id: 'p2', label: 'P2', summary: '' }
+      ],
+      steps: [
+        { id: 1, phase: 'p1', tone: 'blue', title: 'P1', detail: 'd' }
+      ]
+    }
+    const { container } = render(<GraphLayout schema={schema} currentIndex={0} />)
+    expect(container.querySelector('[data-diagram-node="a1"]')?.getAttribute('data-active')).toBe('true')
+    expect(container.querySelector('[data-diagram-node="a2"]')?.getAttribute('data-active')).toBe('true')
+    expect(container.querySelector('[data-diagram-node="b1"]')?.getAttribute('data-active')).toBe('false')
+  })
+
+  it('falls back to from/to when step has no phase (backward compat)', () => {
+    const schema: DiagramSchema = {
+      nodes: [
+        { id: 'a', title: 'A', x: 0, y: 0, tone: 'blue' },
+        { id: 'b', title: 'B', x: 100, y: 0, tone: 'orange' }
+      ],
+      edges: [{ source: 'a', target: 'b' }],
+      steps: [{ id: 1, from: 'a', to: 'b', tone: 'blue', title: 'A→B', detail: 'd' }]
+    }
+    const { container } = render(<GraphLayout schema={schema} currentIndex={0} />)
+    expect(container.querySelector('[data-diagram-node="a"]')?.getAttribute('data-active')).toBe('true')
+    expect(container.querySelector('[data-diagram-node="b"]')?.getAttribute('data-active')).toBe('true')
+  })
+})

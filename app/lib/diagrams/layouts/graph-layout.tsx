@@ -1,5 +1,5 @@
 import React from 'react'
-import type { DiagramSchema, EdgeSchema, NodeSchema } from '../types'
+import type { DiagramSchema, EdgeSchema, NodeSchema, StepSchema } from '../types'
 import { TONE_COLORS } from '../tone'
 
 export type GraphLayoutProps = { schema: DiagramSchema; currentIndex: number }
@@ -15,16 +15,29 @@ function edgeKey(edge: EdgeSchema) {
   return `${edge.source}-${edge.target}`
 }
 
+function computeActiveNodeIds(
+  current: StepSchema | undefined,
+  nodes: NodeSchema[]
+): Set<string> {
+  if (!current) return new Set()
+  if (current.phase) {
+    const ids = nodes
+      .filter((n) => n.phase === current.phase)
+      .map((n) => n.id)
+    if (ids.length > 0) return new Set(ids)
+  }
+  const fallback = new Set<string>()
+  if (current.from) fallback.add(current.from)
+  if (current.to) fallback.add(current.to)
+  return fallback
+}
+
 export function GraphLayout({ schema, currentIndex }: GraphLayoutProps) {
   const nodes = schema.nodes ?? []
   const edges = schema.edges ?? []
   const steps = schema.steps ?? []
   const current = steps[currentIndex]
-  const activeNodeIds = new Set<string>()
-  if (current) {
-    activeNodeIds.add(current.from)
-    activeNodeIds.add(current.to)
-  }
+  const activeNodeIds = computeActiveNodeIds(current, nodes)
   const nodeById = new Map(nodes.map((node) => [node.id, node]))
 
   return (
