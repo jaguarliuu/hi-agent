@@ -9,6 +9,12 @@ import { CopyFeedbackButton } from './app/lib/motion/copy-feedback-button'
 import { OpenProjectButton } from './app/lib/open-project-button'
 import { PlaygroundSection } from './app/lib/playground/playground-section'
 import { RunnableCodeBlock } from './app/lib/runnable-code-block'
+import { InteractiveDiagram } from './app/lib/diagrams/interactive-diagram'
+import { Lane } from './app/lib/diagrams/children/lane'
+import { Phase } from './app/lib/diagrams/children/phase'
+import { Step } from './app/lib/diagrams/children/step'
+import { Node as DiagramNode } from './app/lib/diagrams/children/node'
+import { Edge as DiagramEdge } from './app/lib/diagrams/children/edge'
 
 const themeComponents = getThemeComponents()
 
@@ -112,6 +118,12 @@ export function useMDXComponents(components) {
     PlaygroundSection,
     RunnableCodeBlock,
     CommandBlock,
-    OpenProjectButton
+    OpenProjectButton,
+    InteractiveDiagram,
+    Lane,
+    Node: DiagramNode,
+    Edge: DiagramEdge,
+    Phase,
+    Step
   }
 }
