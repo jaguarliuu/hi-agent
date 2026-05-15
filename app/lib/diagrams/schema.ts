@@ -16,7 +16,8 @@ const nodeSchema = z.object({
   subtitle: z.string().optional(),
   x: z.number(),
   y: z.number(),
-  tone: ToneEnum
+  tone: ToneEnum,
+  phase: z.string().optional()
 })
 
 const edgeSchema = z.object({

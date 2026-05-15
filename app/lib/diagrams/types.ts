@@ -14,6 +14,7 @@ export type NodeSchema = {
   x: number
   y: number
   tone: Tone
+  phase?: string
 }
 
 export type EdgeSchema = {

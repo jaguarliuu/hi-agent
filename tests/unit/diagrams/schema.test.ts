@@ -58,4 +58,23 @@ describe('parseDiagramSchema', () => {
       })
     ).toThrow(/ghost/)
   })
+
+  it('accepts optional phase field on nodes', () => {
+    expect(() =>
+      parseDiagramSchema({
+        nodes: [{ id: 'n1', title: 'N1', x: 0, y: 0, tone: 'blue', phase: 'p1' }],
+        phases: [{ id: 'p1', label: 'P1', summary: '' }],
+        steps: [{ id: 1, from: 'n1', to: 'n1', tone: 'blue', title: 'T', detail: 'D' }]
+      })
+    ).not.toThrow()
+  })
+
+  it('rejects invalid phase type on nodes', () => {
+    expect(() =>
+      parseDiagramSchema({
+        nodes: [{ id: 'n1', title: 'N1', x: 0, y: 0, tone: 'blue', phase: 123 }],
+        steps: [{ id: 1, from: 'n1', to: 'n1', tone: 'blue', title: 'T', detail: 'D' }]
+      })
+    ).toThrow()
+  })
 })
