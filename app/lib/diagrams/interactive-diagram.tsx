@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
+import React, { useCallback, useMemo, useRef, type ReactNode } from 'react'
 import type { DiagramLayoutKind, DiagramSchema, LaneSchema, NodeSchema } from './types'
 import { collectDiagramSchema } from './children'
 import { parseDiagramSchema } from './schema'
@@ -22,6 +22,10 @@ export type InteractiveDiagramProps = {
   children?: ReactNode
 }
 
+type SchemaResult =
+  | { schema: DiagramSchema; validationError: null }
+  | { schema: null; validationError: string }
+
 export function InteractiveDiagram({
   id,
   layout,
@@ -35,25 +39,22 @@ export function InteractiveDiagram({
   data,
   children
 }: InteractiveDiagramProps) {
-  const [validationError, setValidationError] = useState<string | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
 
-  const schema = useMemo<DiagramSchema | null>(() => {
+  const { schema, validationError } = useMemo<SchemaResult>(() => {
     const raw = data ?? collectDiagramSchema(children)
     if (!raw || raw.steps.length === 0) {
-      setValidationError('Diagram has no steps')
-      return null
+      return { schema: null, validationError: 'Diagram has no steps' }
     }
     try {
-      return parseDiagramSchema(raw)
+      return { schema: parseDiagramSchema(raw), validationError: null }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Invalid diagram schema'
       if (process.env.NODE_ENV !== 'production') {
         throw err
       }
+      const message = err instanceof Error ? err.message : 'Invalid diagram schema'
       console.warn(`[InteractiveDiagram:${id}]`, message)
-      setValidationError(message)
-      return raw
+      return { schema: null, validationError: message }
     }
   }, [data, children, id])
 
@@ -64,11 +65,11 @@ export function InteractiveDiagram({
   const returnFocus = useCallback(() => triggerRef.current?.focus(), [])
 
   if (!schema) {
-    return validationError ? (
+    return (
       <div role="alert" className="ha-agent-timeline-entry">
         Diagram error: {validationError}
       </div>
-    ) : null
+    )
   }
 
   const previewLanes: LaneSchema[] | undefined = layout === 'lanes' ? schema.lanes : undefined
