@@ -49,4 +49,4 @@ export type DiagramSchema = {
   steps: StepSchema[]
 }
 
-export type DiagramLayoutKind = 'lanes' | 'graph' | 'flow'
+export type DiagramLayoutKind = 'lanes' | 'graph'

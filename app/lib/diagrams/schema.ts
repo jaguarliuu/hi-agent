@@ -58,6 +58,8 @@ export const diagramZodSchema = z
     value.nodes?.forEach((n) => knownIds.add(n.id))
     const knownPhases = new Set<string>()
     value.phases?.forEach((p) => knownPhases.add(p.id))
+    const phasesDeclared = value.phases !== undefined
+    const idsDeclared = value.lanes !== undefined || value.nodes !== undefined
 
     value.steps.forEach((step, index) => {
       const hasPhase = step.phase != null
@@ -82,7 +84,13 @@ export const diagramZodSchema = z
       }
 
       if (hasPhase) {
-        if (knownPhases.size > 0 && !knownPhases.has(step.phase!)) {
+        if (!phasesDeclared) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['steps', index, 'phase'],
+            message: `step references phase "${step.phase}" but no phases are declared`
+          })
+        } else if (!knownPhases.has(step.phase!)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['steps', index, 'phase'],
@@ -90,20 +98,28 @@ export const diagramZodSchema = z
           })
         }
       }
-      if (hasFrom && knownIds.size > 0) {
-        if (!knownIds.has(step.from!)) {
+      if (hasFrom) {
+        if (!idsDeclared) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['steps', index, 'from'],
-            message: `Unknown lane/node id: ${step.from}`
+            message: `step references from/to "${step.from}"/"${step.to}" but neither lanes nor nodes are declared`
           })
-        }
-        if (!knownIds.has(step.to!)) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['steps', index, 'to'],
-            message: `Unknown lane/node id: ${step.to}`
-          })
+        } else {
+          if (!knownIds.has(step.from!)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['steps', index, 'from'],
+              message: `Unknown lane/node id: ${step.from}`
+            })
+          }
+          if (!knownIds.has(step.to!)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['steps', index, 'to'],
+              message: `Unknown lane/node id: ${step.to}`
+            })
+          }
         }
       }
     })

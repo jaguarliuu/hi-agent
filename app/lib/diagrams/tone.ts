@@ -1,10 +1,10 @@
 import type { Tone } from './types'
 
-export const TONE_COLORS: Record<Tone, string> = {
+export const TONE_COLORS = {
   blue: '#2f6feb',
   violet: '#6f4bd8',
   cyan: '#16a3a5',
   orange: '#f2801c',
   green: '#2f9d67',
   navy: '#2763c4'
-}
+} as const satisfies Record<Tone, string>

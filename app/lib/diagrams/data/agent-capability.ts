@@ -76,7 +76,6 @@ const rawAgentCapabilitySchema: DiagramSchema = {
     { id: 'harness-observability', title: '可观测性', x: 820, y: 410, tone: 'navy', phase: 'harness' },
     { id: 'harness-eval', title: '评测与优化', x: 820, y: 530, tone: 'navy', phase: 'harness' }
   ],
-  edges: [],
   steps: [
     {
       id: 1,

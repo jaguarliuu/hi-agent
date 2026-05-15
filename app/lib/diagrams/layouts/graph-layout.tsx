@@ -32,6 +32,8 @@ function computeActiveNodeIds(
   return fallback
 }
 
+export { computeActiveNodeIds }
+
 export function GraphLayout({ schema, currentIndex }: GraphLayoutProps) {
   const nodes = schema.nodes ?? []
   const edges = schema.edges ?? []

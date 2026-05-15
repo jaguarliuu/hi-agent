@@ -2,8 +2,8 @@ import type { Tone } from '../types'
 
 export type StepProps = {
   id: number | string
-  from: string
-  to: string
+  from?: string
+  to?: string
   y?: number
   phase?: string
   tone: Tone

@@ -139,4 +139,22 @@ describe('StepSchema dual-mode (phase-only ／ from-to)', () => {
       })
     ).not.toThrow()
   })
+
+  it('rejects phase-only step when phases array is not declared at all', () => {
+    expect(() =>
+      parseDiagramSchema({
+        nodes: [{ id: 'n1', title: 'N1', x: 0, y: 0, tone: 'blue' }],
+        steps: [{ id: 1, phase: 'p1', tone: 'blue', title: 'T', detail: 'D' }]
+      })
+    ).toThrow(/no phases are declared/)
+  })
+
+  it('rejects from/to step when neither lanes nor nodes are declared', () => {
+    expect(() =>
+      parseDiagramSchema({
+        phases: [{ id: 'p1', label: 'P1', summary: '' }],
+        steps: [{ id: 1, from: 'a', to: 'b', tone: 'blue', title: 'T', detail: 'D' }]
+      })
+    ).toThrow(/neither lanes nor nodes are declared/)
+  })
 })

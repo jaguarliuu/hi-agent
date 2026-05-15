@@ -7,6 +7,7 @@ export type NodeProps = {
   x: number
   y: number
   tone: Tone
+  phase?: string
 }
 
 export function Node(_props: NodeProps): null {
