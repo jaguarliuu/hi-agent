@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { RegistryItem } from '../_lib/component-registry'
 
 interface InsertDialogProps {
@@ -21,6 +22,11 @@ interface InsertDialogProps {
  */
 export function InsertDialog({ item, onCancel, onInsert }: InsertDialogProps) {
   const [values, setValues] = useState<Record<string, string>>({})
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // item 切换 → 用 default 重置表单
   useEffect(() => {
@@ -41,13 +47,13 @@ export function InsertDialog({ item, onCancel, onInsert }: InsertDialogProps) {
     }
   }, [item, values])
 
-  if (!item) return null
+  if (!item || !mounted) return null
 
   const missing = item.fields
     .filter((f) => f.required && !values[f.name]?.trim())
     .map((f) => f.label)
 
-  return (
+  return createPortal(
     <div className="studio-dialog-overlay" role="dialog" aria-modal="true">
       <div className="studio-dialog">
         <header className="studio-dialog__header">
@@ -140,6 +146,7 @@ export function InsertDialog({ item, onCancel, onInsert }: InsertDialogProps) {
           </button>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

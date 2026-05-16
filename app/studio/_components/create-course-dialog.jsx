@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { createCourse } from '../_lib/file-api-client'
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/
@@ -37,6 +38,11 @@ export function CreateCourseDialog({
   const [firstChapterTitle, setFirstChapterTitle] = useState('开始入门')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -68,7 +74,7 @@ export function CreateCourseDialog({
     return list
   }, [title, slug, existingSlugs, startChapterSlug, firstChapterTitle])
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
   async function submit() {
     setSubmitting(true)
@@ -91,7 +97,7 @@ export function CreateCourseDialog({
     }
   }
 
-  return (
+  return createPortal(
     <div className="studio-dialog-overlay" role="dialog" aria-modal="true">
       <div className="studio-dialog studio-dialog--wide">
         <header className="studio-dialog__header">
@@ -233,6 +239,7 @@ export function CreateCourseDialog({
           </button>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   scaffold,
   type CourseNode,
@@ -41,6 +42,11 @@ export function ScaffoldDialog({
   const [subTitle, setSubTitle] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -52,14 +58,19 @@ export function ScaffoldDialog({
     setTitle('')
     setSubSlug('')
     setSubTitle('')
-  }, [open, defaultCourse, defaultChapter, courses])
+    // 只在 open 由 false → true 时重置一次。
+    // 不把 courses / defaultCourse / defaultChapter 放进依赖：
+    // 父组件保存 / 刷新文件树时 courses 引用会变，
+    // 不应清空用户正在填写的表单。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const currentCourse = useMemo(
     () => courses.find((c) => c.slug === course),
     [courses, course]
   )
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
   const errors: string[] = []
   if (!SLUG_RE.test(course)) errors.push('选择课程')
@@ -95,7 +106,7 @@ export function ScaffoldDialog({
     }
   }
 
-  return (
+  return createPortal(
     <div className="studio-dialog-overlay" role="dialog" aria-modal="true">
       <div className="studio-dialog">
         <header className="studio-dialog__header">
@@ -231,6 +242,7 @@ export function ScaffoldDialog({
           </button>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
