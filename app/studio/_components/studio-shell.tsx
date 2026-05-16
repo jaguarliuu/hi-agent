@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useTheme } from 'next-themes'
 import {
   fetchTree,
   fetchFile,
@@ -16,6 +17,7 @@ import { ComponentPalette } from './component-palette'
 import { InsertDialog } from './insert-dialog'
 import { ScaffoldDialog } from './scaffold-dialog'
 import { FrontmatterForm } from './frontmatter-form'
+import { StudioThemeToggle } from './studio-theme-toggle'
 import type { RegistryItem } from '../_lib/component-registry'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict'
@@ -64,6 +66,8 @@ function parseCourseChapter(
  * 接入到这个壳上，所以预先布局好右栏 placeholder 与 toolbar 槽位。
  */
 export function StudioShell() {
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
   const [tree, setTree] = useState<CourseNode[]>([])
   const [treeLoading, setTreeLoading] = useState(false)
   const [openFile, setOpenFile] = useState<OpenFileState | null>(null)
@@ -376,6 +380,7 @@ export function StudioShell() {
           >
             保存
           </button>
+          <StudioThemeToggle className="studio-theme-toggle--toolbar" />
         </div>
       </header>
 
@@ -393,6 +398,7 @@ export function StudioShell() {
             <MdxEditor
               key={openFile.path /* 切换文件时强制重建编辑器 */}
               initialValue={openFile.content}
+              dark={isDark}
               onChange={handleEditorChange}
               onSave={persist}
               onImageFile={handleImageFile}

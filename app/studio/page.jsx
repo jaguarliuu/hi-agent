@@ -1,5 +1,6 @@
 import { COURSES } from '../courses-data'
 import { StudioLandingClient } from './_components/studio-landing-client'
+import { StudioThemeToggle } from './_components/studio-theme-toggle'
 
 export const metadata = {
   title: 'Studio'
@@ -7,7 +8,7 @@ export const metadata = {
 
 export default function StudioLandingPage() {
   // 在 server 端把 COURSES 序列化后交给 client，避免 client bundle 直接引用
-  // courses-data.js 整个文件（节省体积）。
+  // [courses-data.js](file:///c:/Users/Administrator/Desktop/Jaguarliu/code/hi-agent/app/courses-data.js) 整个文件（节省体积）。
   const courses = COURSES.map((c) => ({
     slug: c.slug,
     title: c.title,
@@ -27,10 +28,13 @@ export default function StudioLandingPage() {
             本地课程内容工作台。选择一门课程进入章节大纲，或新建一个章节开始写作。
           </p>
         </div>
-        <span className="studio-landing__pill" title="dev only">
-          <span className="studio-landing__pill-dot" />
-          dev only
-        </span>
+        <div className="studio-landing__actions">
+          <span className="studio-landing__pill" title="dev only">
+            <span className="studio-landing__pill-dot" />
+            dev only
+          </span>
+          <StudioThemeToggle className="studio-theme-toggle--landing" />
+        </div>
       </header>
 
       <StudioLandingClient courses={courses} />
