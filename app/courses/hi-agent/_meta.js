@@ -4,6 +4,7 @@ export default {
     type: 'separator',
     title: '课程章节'
   },
+  begin: '00 · begin',
   chat: '01 · Chat',
   'agent-loop': '02 · Agent Loop',
   tool: '03 · Tool',

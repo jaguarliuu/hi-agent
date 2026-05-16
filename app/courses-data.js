@@ -37,7 +37,8 @@ export const COURSES = [
       'context-engineering',
       'memory',
       'multi-agent',
-      'harness'
+      'harness',
+      'begin'
     ]
   }
 ]

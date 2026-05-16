@@ -47,11 +47,14 @@ async function exists(p: string) {
 const PROJECT_ROOT = path.resolve(process.cwd())
 
 function chapterMetaTemplate(title: string) {
+  // 注意：不要把 index 设为 display: 'hidden'。
+  // Nextra breadcrumb 渲染时会访问 item.children[0].route，
+  // 若该 chapter 暂无子节、且唯一的 index 又被 hidden 过滤掉，
+  // children[0] 会变成 undefined → undefined.route 抛错。
+  // 让 index 保持可见，等用户用 Studio 追加第一个 subchapter 时
+  // 再视情况手动隐藏。
   return `export default {
-  index: {
-    title: ${JSON.stringify(title + ' · 概览')},
-    display: 'hidden'
-  }
+  index: ${JSON.stringify(title + ' · 概览')}
 }
 `
 }
@@ -169,6 +172,40 @@ async function appendChapterToCoursesData(course: string, chapter: string) {
   await writeFile(dataAbs, next, 'utf8')
 }
 
+/**
+ * 把 chapter slug 追加到课程的 _meta.js（app/courses/<course>/_meta.js）。
+ * 这是 Nextra pageMap 必需的注册——否则 breadcrumb 在新章节路由会拿不到 route 字段而崩。
+ * 已存在则跳过。
+ */
+async function appendChapterToCourseMeta(
+  course: string,
+  chapter: string,
+  title: string
+) {
+  const courseMetaAbs = path.join(
+    PROJECT_ROOT,
+    'app',
+    'courses',
+    course,
+    '_meta.js'
+  )
+  if (!(await exists(courseMetaAbs))) {
+    throw new Error(`course meta not found: app/courses/${course}/_meta.js`)
+  }
+  const src = await readFile(courseMetaAbs, 'utf8')
+  if (src.includes(`'${chapter}'`) || src.includes(`"${chapter}"`)) {
+    return
+  }
+  // 在 default export 对象的最后一个 } 之前插入键值
+  const lastBrace = src.lastIndexOf('}')
+  if (lastBrace < 0) throw new Error('cannot parse course _meta.js')
+  const before = src.slice(0, lastBrace).trimEnd()
+  const needsComma = !before.endsWith(',') && !before.endsWith('{')
+  const insertion = `${needsComma ? ',\n' : '\n'}  '${chapter}': ${JSON.stringify(title)}\n`
+  const next = before + insertion + src.slice(lastBrace)
+  await writeFile(courseMetaAbs, next, 'utf8')
+}
+
 export async function POST(request: Request) {
   const guard = ensureStudioDevMode()
   if (guard) return guard
@@ -217,7 +254,17 @@ export async function POST(request: Request) {
       await writeFile(pageAbs, chapterPageTemplate(title), 'utf8')
       await writeFile(imagesAbs, '', 'utf8')
 
-      // 2. 写入 courses-data.js
+      // 2. 注册到课程的 _meta.js（Nextra pageMap 必需）
+      try {
+        await appendChapterToCourseMeta(course, chapter, title)
+      } catch (err) {
+        console.warn(
+          '[studio/scaffold] could not patch course _meta.js:',
+          err
+        )
+      }
+
+      // 3. 写入 courses-data.js
       try {
         await appendChapterToCoursesData(course, chapter)
       } catch (err) {
