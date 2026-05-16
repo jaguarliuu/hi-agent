@@ -8,7 +8,7 @@ const { intersectionState, pathnameState } = vi.hoisted(() => ({
   intersectionState: {
     callback: null as IntersectionObserverCallback | null,
   },
-  pathnameState: { value: '/docs/route-motion' },
+  pathnameState: { value: '/courses/hi-agent/route-motion' },
 }));
 
 vi.mock('nextra-theme-docs', async () => {
@@ -81,7 +81,7 @@ async function renderRootLayoutBody() {
 describe('RootLayout route motion shell', () => {
   beforeEach(() => {
     intersectionState.callback = null;
-    pathnameState.value = '/docs/route-motion';
+    pathnameState.value = '/courses/hi-agent/route-motion';
     (
       globalThis as typeof globalThis & { React?: typeof React }
     ).React = React;
@@ -203,7 +203,7 @@ describe('RootLayout route motion shell', () => {
     expect(onMount).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('page-content').closest('[data-ha-route-stage]')).toHaveAttribute(
       'data-ha-route-stage',
-      '/docs/route-motion'
+      '/courses/hi-agent/route-motion'
     );
 
     act(() => {
@@ -219,7 +219,7 @@ describe('RootLayout route motion shell', () => {
       expect(screen.getByText('Intro')).toHaveAttribute('data-ha-toc-active', 'true');
     });
 
-    pathnameState.value = '/docs/route-motion/next';
+    pathnameState.value = '/courses/hi-agent/route-motion/next';
 
     await act(async () => {
       rerender(
@@ -261,7 +261,7 @@ describe('RootLayout route motion shell', () => {
 
     expect(screen.getByTestId('page-content').closest('[data-ha-route-stage]')).toHaveAttribute(
       'data-ha-route-stage',
-      '/docs/route-motion/next'
+      '/courses/hi-agent/route-motion/next'
     );
 
     await waitFor(() => {

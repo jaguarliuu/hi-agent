@@ -8,12 +8,12 @@ const useClientLayoutEffect =
   typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 function shouldShowReadingProgress(pathname) {
-  if (typeof pathname !== 'string' || !pathname.startsWith('/docs/')) {
+  if (typeof pathname !== 'string' || !pathname.startsWith('/courses/')) {
     return false
   }
 
   const segments = pathname.split('/').filter(Boolean)
-  return segments.length >= 3
+  return segments.length >= 4
 }
 
 function measureReadingProgress() {

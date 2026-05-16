@@ -1,4 +1,4 @@
-import manifest from '@/examples/labs/01-webcontainers-pilot/manifest.json';
+import manifest from '@/examples/hi-agent/labs/01-webcontainers-pilot/manifest.json';
 import {
   parsePlaygroundManifest,
   type PlaygroundManifest

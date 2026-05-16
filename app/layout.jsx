@@ -14,11 +14,11 @@ import { HeaderAutohide } from './lib/header-autohide'
 export const metadata = {
   metadataBase: new URL('https://jaguarliuu.github.io/hi-agent'),
   title: {
-    default: 'Hi-Agent — 构建会思考的 AI Agent',
+    default: 'Hi-Agent — Agent 工程系列课程',
     template: '%s · Hi-Agent'
   },
-  description: '一门系统讲解 AI Agent 的文字课程：从 Chat、Agent Loop、Tool、Context Engineering、Memory、Multi-Agent 到 Harness。',
-  applicationName: 'Hi-Agent Docs',
+  description: 'Hi-Agent 系列课程：围绕 AI Agent 工程的系统课程合集，从 Chat、Agent Loop、Tool、Context Engineering 到 Memory、Multi-Agent、Harness，并持续扩展更多 Agent 主题课程。',
+  applicationName: 'Hi-Agent',
   appleWebApp: { title: 'Hi-Agent' },
   other: {
     'msapplication-TileColor': '#fff'
@@ -27,7 +27,7 @@ export const metadata = {
 
 const banner = (
   <Banner storageKey="hi-agent-launch">
-    Hi-Agent v1.0 · 全新上线 · 一门关于 Agent 工程的系统课程
+    Hi-Agent 系列 · 围绕 Agent 工程的系统课程合集 · 持续更新
   </Banner>
 )
 
@@ -48,7 +48,7 @@ const navbar = (
       <span className="ha-logo">
         <span aria-hidden className="ha-logo-mark" />
         <span className="ha-logo-text">Hi-Agent</span>
-        <span className="ha-logo-badge">Docs</span>
+        <span className="ha-logo-badge">Series</span>
       </span>
     }
     projectLink="https://github.com/jaguarliuu/hi-agent"
@@ -58,7 +58,7 @@ const navbar = (
 const footer = (
   <Footer>
     <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-      <span>© {new Date().getFullYear()} Hi-Agent. 一门关于 Agent 工程的系统课程。</span>
+      <span>© {new Date().getFullYear()} Hi-Agent. 围绕 Agent 工程的系统课程合集。</span>
       <span style={{ opacity: 0.6, fontSize: 12 }}>Built with Next.js + Nextra</span>
     </div>
   </Footer>

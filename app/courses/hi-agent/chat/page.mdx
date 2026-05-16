@@ -1,0 +1,34 @@
+---
+title: Chat
+description: 从对话接口出发，理解 Agent 的最小表达单元。
+---
+
+import { Callout, Cards } from 'nextra/components'
+import { DocLink } from '../../../lib/doc-link'
+
+# M01 · Chat
+
+> 在我们谈论"Agent"之前，先回到一切的起点：**Chat**。
+
+## 本章目标
+
+- 理解 Chat Completion 接口的基本构成：messages、roles、streaming
+- 认识"对话"作为 Agent 输入/输出协议的本质
+- 掌握一个最小可运行的对话循环
+
+<Callout type="info">
+本章仍在持续完善。下方 Cards 指向本章各小节，你可以按顺序阅读，也可以挑感兴趣的章节切入。
+</Callout>
+
+## 本章目录
+
+<Cards>
+  <Cards.Card title="1.1 聊起来先" href="/courses/hi-agent/chat/01-getting-started" />
+  <Cards.Card title="1.2 说透流式输出" href="/courses/hi-agent/chat/02-core-concepts" />
+  <Cards.Card title="1.3 Agent的错误处理策略" href="/courses/hi-agent/chat/03-error" />
+  <Cards.Card title="1.4 Hi-Agent异常处理框架" href="/courses/hi-agent/chat/04-error-action" />
+</Cards>
+
+---
+
+**下一章** → <DocLink href="/courses/hi-agent/agent-loop">M02 · Agent Loop</DocLink>

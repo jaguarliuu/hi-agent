@@ -18,7 +18,7 @@ const execFileAsync = promisify(execFile);
 const targets = [
   {
     sectionId: 'labs-01-webcontainers-pilot',
-    sourceDir: resolve('examples/labs/01-webcontainers-pilot/workspace'),
+    sourceDir: resolve('examples/hi-agent/labs/01-webcontainers-pilot/workspace'),
     outFile: resolve('public/webcontainer-snapshots/labs-01-webcontainers-pilot.bin')
   }
 ];

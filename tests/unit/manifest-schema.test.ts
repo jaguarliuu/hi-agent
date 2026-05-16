@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import pilotManifest from '@/examples/labs/01-webcontainers-pilot/manifest.json';
+import pilotManifest from '@/examples/hi-agent/labs/01-webcontainers-pilot/manifest.json';
 import {
   parsePlaygroundManifest,
   playgroundManifestSchema

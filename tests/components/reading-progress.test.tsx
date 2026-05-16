@@ -46,11 +46,11 @@ describe('<ReadingProgress>', () => {
     const { rerender } = render(<ReadingProgress />);
     expect(screen.queryByTestId('reading-progress')).toBeNull();
 
-    pathnameState.value = '/docs/chat';
+    pathnameState.value = '/courses/hi-agent/chat';
     rerender(<ReadingProgress />);
     expect(screen.queryByTestId('reading-progress')).toBeNull();
 
-    pathnameState.value = '/docs/chat/agent-loop';
+    pathnameState.value = '/courses/hi-agent/chat/agent-loop';
     rerender(<ReadingProgress />);
 
     expect(screen.getByTestId('reading-progress')).toHaveAttribute(
@@ -69,7 +69,7 @@ describe('<ReadingProgress>', () => {
       });
 
     try {
-      pathnameState.value = '/docs/chat/agent-loop';
+      pathnameState.value = '/courses/hi-agent/chat/agent-loop';
       const { ReadingProgress } = await import('@/app/lib/reading-progress');
       render(<ReadingProgress />);
 
@@ -106,7 +106,7 @@ describe('<ReadingProgress>', () => {
       });
 
     try {
-      pathnameState.value = '/docs/chat/agent-loop';
+      pathnameState.value = '/courses/hi-agent/chat/agent-loop';
       const { ReadingProgress } = await import('@/app/lib/reading-progress');
       render(<ReadingProgress />);
 
@@ -122,7 +122,7 @@ describe('<ReadingProgress>', () => {
   });
 
   it('measures the current progress immediately on mount and when the article pathname changes', async () => {
-    pathnameState.value = '/docs/chat/agent-loop';
+    pathnameState.value = '/courses/hi-agent/chat/agent-loop';
     setPageMetrics({ scrollHeight: 2000, innerHeight: 500, scrollY: 750 });
 
     const { ReadingProgress } = await import('@/app/lib/reading-progress');
@@ -132,7 +132,7 @@ describe('<ReadingProgress>', () => {
       'scaleX(0.5)'
     );
 
-    pathnameState.value = '/docs/chat/tool-calling';
+    pathnameState.value = '/courses/hi-agent/chat/tool-calling';
     setPageMetrics({ scrollHeight: 2000, innerHeight: 500, scrollY: 300 });
     rerender(<ReadingProgress />);
 
@@ -157,7 +157,7 @@ describe('<ReadingProgress>', () => {
     });
 
     try {
-      pathnameState.value = '/docs/labs/01-webcontainers-pilot';
+      pathnameState.value = '/courses/hi-agent/labs/01-webcontainers-pilot';
       const { ReadingProgress } = await import('@/app/lib/reading-progress');
       render(<ReadingProgress />);
 
@@ -199,7 +199,7 @@ describe('<ReadingProgress>', () => {
     });
 
     try {
-      pathnameState.value = '/docs/labs/01-webcontainers-pilot';
+      pathnameState.value = '/courses/hi-agent/labs/01-webcontainers-pilot';
       const { ReadingProgress } = await import('@/app/lib/reading-progress');
       render(<ReadingProgress />);
 
