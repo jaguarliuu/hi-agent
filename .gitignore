@@ -19,6 +19,9 @@ public/webcontainer-snapshots
 
 .superpowers/
 
+# studio editor: build-time strip trash (must never be committed)
+.studio-trash/
+
 # SSH / deploy keys — MUST stay out of Git
 cnb_hi_agent_deploy
 cnb_hi_agent_deploy.pub

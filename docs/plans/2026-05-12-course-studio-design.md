@@ -2,11 +2,162 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
+---
+
+## 2026-05-16 Revision Note
+
+This plan was originally drafted on 2026-05-12, **before** the multi-course
+architecture (see [2026-05-16-multi-course-architecture.md](./2026-05-16-multi-course-architecture.md))
+landed. The following decisions supersede earlier sections of this document.
+When the body of this plan conflicts with the bullets below, the bullets win.
+
+### Path & route changes (post multi-course migration)
+
+- Course content has moved: `app/docs/**/page.mdx` → `app/courses/<courseSlug>/<chapter>/**/page.mdx`.
+- Route shape: `/docs/<chapter>` → `/courses/<courseSlug>/<chapter>`.
+- Workspace examples: `examples/labs/<sectionId>/**` → `examples/<courseSlug>/labs/<sectionId>/**`.
+- Single source of truth for the course catalog now lives in
+  [app/courses-data.js](../../app/courses-data.js); `_meta.js` files only describe
+  per-folder ordering.
+
+### Admin surface naming
+
+- The admin route is renamed from `/admin` to **`/studio`**.
+- API routes move from `/api/admin/*` to **`/api/studio/*`**.
+- Source folders move from `app/admin/**` → **`app/studio/**`** and from
+  `app/lib/admin/**` → **`app/lib/studio/**`** (or `app/studio/_lib/**` for
+  view-local helpers).
+
+### V1 user-confirmed scope (2026-05-16)
+
+The author confirmed v1 must include exactly these four capabilities:
+
+1. **Three-pane layout + live preview + save (`Cmd+S`)**.
+2. **Component insertion palette** covering 10+ first-party components
+   (`CodeBlock`, `CommandBlock`, `Callout`, `InteractiveDiagram`,
+   `AgentTimeline`, `AgentCapability`, `RunnableCodeBlock`, `OpenProjectButton`,
+   `PlaygroundSection`, image, etc.).
+3. **Drag-and-drop / clipboard-paste image upload**, lands beside the chapter
+   under `public/courses/<courseSlug>/<chapter>/images/`.
+4. **Chapter scaffolding**: one-click "new chapter" creates the directory,
+   `_meta.js`, template `page.mdx` files, and updates `courses-data.js`.
+
+**Explicitly out of v1:** Git panel (the author maintains git via terminal),
+multi-user auth, review workflow, database backend, full WYSIWYG.
+
+### Editor core: CodeMirror 6 (not Monaco)
+
+The original plan listed Monaco. The decision is now **CodeMirror 6** for v1:
+
+- Smaller bundle (~200 KB vs ~3 MB), keeps `npm run studio` snappy.
+- Author values diff-friendly raw MDX over IDE-grade IntelliSense.
+- Component insertion is handled via the palette + slash-command + props form,
+  not via embedded WYSIWYG nodes.
+- The right-pane preview compiles MDX with the **same** renderer used at
+  `/courses/<slug>/<chapter>` so what-you-see is what-ships.
+
+### Local-only access model
+
+- New script: `npm run studio` = `cross-env STUDIO_MODE=1 next dev`,
+  optionally auto-opening `http://localhost:3000/studio`.
+- Production protection has three layers:
+  1. **Build-time strip** — [scripts/strip-studio.mjs](../../scripts/strip-studio.mjs)
+     moves `app/studio/` and `app/api/studio/` to `.studio-trash/` before
+     `next build` and a paired `restore-studio.mjs` puts them back. The
+     `npm run build` script is updated accordingly.
+  2. **Runtime guard** — [app/studio/layout.jsx](../../app/studio/layout.jsx)
+     and every `/api/studio/*` route handler call `notFound()` (or return 404)
+     when `process.env.NODE_ENV !== 'development'`.
+  3. **Static export safety net** — `output: 'export'` in [next.config.mjs](../../next.config.mjs)
+     means API routes never end up in `out/` regardless.
+- **No auth token required for v1** because the surface is dev-only and the
+  user explicitly opted out of Git integration. A `STUDIO_AUTH_TOKEN` hook
+  may still be added later inside a single middleware file.
+
+### Image upload (new in v1, not in original plan)
+
+- Endpoint: `POST /api/studio/upload` (multipart/form-data).
+- Validation: ≤ 5 MB, MIME ∈ `image/{png,jpeg,webp,gif,svg+xml}`.
+- Destination: `public/courses/<courseSlug>/<chapter>/images/<contenthash>.<ext>`
+  (per-chapter co-location, decided 2026-05-16).
+- Editor integration: CodeMirror listens to `paste` and `drop` events and
+  inserts `![alt](/courses/<slug>/<chapter>/images/<file>)` at the caret on
+  success. `basePath` is applied at preview time, not stored on disk.
+
+### Phase mapping after revision
+
+The 6 phases below remain conceptually correct, but their first deliverable is
+now scoped to the v1 four-feature MVP:
+
+| Old phase                       | Revised v1 status                                          |
+|---------------------------------|------------------------------------------------------------|
+| Phase 1: Read-Only Foundation   | **In v1** — list courses/chapters/files, open file        |
+| Phase 2: MDX Save Path          | **In v1** — `Cmd+S` writes `app/courses/**/*.mdx`         |
+| Phase 3: Structured Course Blocks | **Partial in v1** — handled via palette+template,        |
+|                                 | full structured-block editing deferred to v2              |
+| Phase 4: Playground Integration | **Deferred to v2** — palette can still insert raw         |
+|                                 | `<PlaygroundSection>` snippets in v1                       |
+| Phase 5: Preview & Validation   | **Preview is in v1**, formal validation report in v2      |
+| Phase 6: Snapshot & Build Hooks | **Deferred to v2**                                         |
+
+### File layout addendum (replaces original `app/admin/**` listing)
+
+```
+app/
+  studio/
+    layout.jsx                 ← dev-only guard + chrome
+    page.jsx                   ← /studio landing (course grid)
+    courses/[slug]/page.jsx    ← chapter outline view
+    edit/[...path]/page.jsx    ← three-pane editor
+    _components/               ← StudioShell, TreeSidebar, MdxEditor (CodeMirror 6),
+                                 LivePreview, ComponentPalette, InsertDialog,
+                                 ImageUploader, ScaffoldDialog, FrontmatterForm
+    _lib/                      ← mdx-snippets, component-registry,
+                                 file-api-client, use-dirty-state
+  api/studio/
+    file/route.ts              ← GET/PUT mdx (mtime optimistic lock)
+    tree/route.ts              ← GET course/chapter/file tree
+    upload/route.ts            ← POST image
+    scaffold/route.ts          ← POST new chapter (also patches courses-data.js)
+    preview/route.ts           ← POST mdx → compiled HTML for the iframe
+scripts/
+  strip-studio.mjs             ← pre-build: move studio out of `app/`
+  restore-studio.mjs           ← post-build: put it back
+```
+
+### Component registry (the single insertion abstraction)
+
+`app/studio/_lib/component-registry.ts` is the **only** place to declare an
+insertable component. Each entry contributes (a) palette icon/label,
+(b) a props form schema, and (c) an MDX snippet template. Adding a new
+component to the palette later means appending one entry.
+
+### Save semantics
+
+- Optimistic concurrency: the GET response includes `mtime`; PUT must echo it
+  back; mismatch → `409 Conflict` with diff payload.
+- Path whitelist: server resolves the requested path and rejects anything
+  outside `app/courses/**` and `public/courses/**`.
+- No autosave in v1 — explicit `Cmd+S` only, to avoid surprising the author's
+  manual git workflow.
+
+### Out of scope reconfirmation
+
+- Git status / staging / commit UI (the author runs git from terminal).
+- Visual diagram-builder for `<InteractiveDiagram>` (palette inserts a stub;
+  full builder lives in v2).
+- Multi-tab editing, command palette, vim/emacs key bindings (v2+).
+
+End of revision note. Original 2026-05-12 plan continues below for context;
+treat any conflicts in favor of this note.
+
+---
+
 **Goal:** Build a first-party Course Studio admin surface for maintaining Hi-Agent lessons, MDX content, WebContainer playground manifests, and workspace files without hand-editing every document.
 
 **Architecture:** Treat the current repository files as the first storage backend, not as UI implementation details. The admin UI reads and writes through a `CourseContentRepository` interface, with a filesystem implementation in V1 and a future database/Git publishing implementation behind the same contract. Course documents are represented as structured lesson blocks plus raw MDX fallback, then serialized back to the existing Nextra/MDX file layout.
 
-**Tech Stack:** Next.js 15 App Router, React 19, TypeScript, Nextra/MDX, Zod, Node filesystem APIs, Monaco Editor, existing WebContainer playground modules, Vitest, React Testing Library, Playwright
+**Tech Stack:** Next.js 15 App Router, React 19, TypeScript, Nextra/MDX, Zod, Node filesystem APIs, **CodeMirror 6** (revised 2026-05-16; was Monaco), existing WebContainer playground modules, Vitest, React Testing Library, Playwright
 
 ---
 

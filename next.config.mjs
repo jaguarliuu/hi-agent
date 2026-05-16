@@ -19,7 +19,10 @@ const withNextra = nextra({
 
 const nextConfig = {
   reactStrictMode: true,
-  output: 'export',
+  // Studio 模式（npm run studio）下需要在 dev 跑动态 API 路由，
+  // 与 output: 'export' 冲突，因此仅在非 studio 模式启用静态导出。
+  // 生产构建走默认的 output: 'export'（GitHub Pages）。
+  ...(process.env.STUDIO_MODE === '1' ? {} : { output: 'export' }),
   images: { unoptimized: true },
   trailingSlash: true,
   basePath,
