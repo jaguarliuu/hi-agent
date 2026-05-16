@@ -7,7 +7,7 @@
  * restore — this script is a defensive safety net, not a hard requirement.
  */
 
-import { rename, rm, readdir } from 'node:fs/promises'
+import { rename, rm, readdir, readFile, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -38,6 +38,16 @@ async function moveBack({ from, to }) {
   console.log(`[restore-studio] restored .studio-trash/${from} -> ${to}`)
 }
 
+async function restoreRootMeta() {
+  const backupPath = path.join(trashRoot, 'app__meta.js.bak')
+  if (!existsSync(backupPath)) return
+  const metaPath = path.join(projectRoot, 'app', '_meta.js')
+  const backup = await readFile(backupPath, 'utf8')
+  await writeFile(metaPath, backup, 'utf8')
+  await rm(backupPath, { force: true })
+  console.log('[restore-studio] restored app/_meta.js')
+}
+
 async function main() {
   if (!existsSync(trashRoot)) {
     console.log('[restore-studio] no .studio-trash, nothing to do')
@@ -46,6 +56,7 @@ async function main() {
   for (const target of TARGETS) {
     await moveBack(target)
   }
+  await restoreRootMeta()
   // 清空 trash（如果空）
   try {
     const remaining = await readdir(trashRoot)

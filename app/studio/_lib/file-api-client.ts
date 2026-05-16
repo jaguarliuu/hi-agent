@@ -130,3 +130,32 @@ export async function scaffold(input: ScaffoldInput): Promise<ScaffoldResult> {
   })
   return asJson(res)
 }
+
+export interface CreateCourseInput {
+  slug: string
+  title: string
+  subtitle: string
+  description: string
+  status: 'live' | 'draft' | 'planned'
+  tag: string
+  startChapterSlug: string
+  firstChapterTitle: string
+}
+
+export interface CreateCourseResult {
+  ok: true
+  slug: string
+  created: string[]
+  openPath: string
+}
+
+export async function createCourse(
+  input: CreateCourseInput
+): Promise<CreateCourseResult> {
+  const res = await fetch('/api/studio/course', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input)
+  })
+  return asJson(res)
+}
