@@ -224,7 +224,14 @@ describe('prepareSectionWorkspace', () => {
 
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(mountMock).toHaveBeenCalledTimes(1);
-    expect(spawnMock).toHaveBeenCalledTimes(1);
+    // First prepare: 1 install spawn + 1 chmod spawn for the .bin executable bit fix.
+    // Second prepare hits the prepared-section guard and spawns nothing extra.
+    expect(spawnMock).toHaveBeenCalledTimes(2);
+    expect(spawnMock).toHaveBeenNthCalledWith(1, 'npm', ['install'], expect.any(Object));
+    expect(spawnMock).toHaveBeenNthCalledWith(2, 'jsh', [
+      '-c',
+      expect.stringContaining('chmod -R +x node_modules/.bin')
+    ]);
   });
 
   it('reinstalls after switching away and back to the same section', async () => {
@@ -238,7 +245,8 @@ describe('prepareSectionWorkspace', () => {
 
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(mountMock).toHaveBeenCalledTimes(3);
-    expect(spawnMock).toHaveBeenCalledTimes(3);
+    // Each prepare runs install + chmod, so 3 prepares spawn 6 commands total.
+    expect(spawnMock).toHaveBeenCalledTimes(6);
   });
 
   it('retries boot after a transient failure', async () => {

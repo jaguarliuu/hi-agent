@@ -116,7 +116,9 @@ export async function prepareSectionWorkspace(manifest: PlaygroundManifest) {
         throw new Error(`Install command failed: ${command.cmd} ${command.args.join(' ')}`);
       }
     }
-    await ensureBinariesExecutable(webcontainer);
+    if (manifest.startup.installCommands.length > 0) {
+      await ensureBinariesExecutable(webcontainer);
+    }
     preparedSectionId = manifest.id;
   }
 
