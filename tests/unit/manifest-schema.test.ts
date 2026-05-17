@@ -33,6 +33,7 @@ describe('playground manifest schema', () => {
     ]);
     expect(manifest.blocks.map((block) => block.blockId)).toEqual([
       'install-deps',
+      'copy-env',
       'open-example',
       'config-snippet',
       'provider-snippet',

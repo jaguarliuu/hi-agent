@@ -19,6 +19,12 @@
       "command": { "cmd": "npm", "args": ["install"] }
     },
     {
+      "blockId": "copy-env",
+      "type": "command",
+      "label": "复制 .env",
+      "command": { "cmd": "cp", "args": [".env.example", ".env"] }
+    },
+    {
       "blockId": "open-example",
       "type": "project-open"
     },
