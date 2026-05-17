@@ -18,16 +18,21 @@
 	# --- WebContainers requirements ---------------------------------
 	# COOP/COEP are mandatory for `crossOriginIsolated`, which in turn
 	# is required for SharedArrayBuffer / WebContainer boot.
-	header {
+	@webcontainerLabs path /courses/hi-agent/labs/*
+	header @webcontainerLabs {
 		Cross-Origin-Embedder-Policy "require-corp"
 		Cross-Origin-Opener-Policy   "same-origin"
 		Cross-Origin-Resource-Policy "cross-origin"
+	}
 
+	header {
 		# Hardening
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy        "strict-origin-when-cross-origin"
 
-		# Static assets are immutable (Next.js fingerprints them).
+		# Default Cache-Control for HTML pages (5 min). The leading `?`
+		# means "only set if the response does not already have this
+		# header"; immutable assets below override per-route.
 		?Cache-Control "public, max-age=300"
 	}
 

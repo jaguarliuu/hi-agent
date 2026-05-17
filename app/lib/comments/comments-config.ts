@@ -1,3 +1,5 @@
+import { WEBCONTAINER_PATH_PREFIX } from '@/app/lib/playground/runtime-headers.js';
+
 export type CommentsProvider = 'giscus' | 'utterances';
 
 export interface GiscusOptions {
@@ -50,7 +52,7 @@ export function shouldShowComments(pathname: string | null | undefined): boolean
   if (!pathname) return false;
   if (pathname.startsWith('/studio')) return false;
   if (pathname.startsWith('/api')) return false;
-  if (pathname.startsWith('/courses/hi-agent/labs/')) return false;
+  if (pathname.startsWith(WEBCONTAINER_PATH_PREFIX)) return false;
   if (!pathname.startsWith('/courses/')) return false;
 
   const normalized = normalizePathname(pathname);

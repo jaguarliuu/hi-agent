@@ -8,6 +8,8 @@ const runtimeHeaders =
 
 const {
   WEBCONTAINER_HEADERS,
+  WEBCONTAINER_PATH_PREFIX,
+  WEBCONTAINER_NEXT_SOURCE,
   getWebcontainerHeaderEntries,
   shouldEnableWebcontainerHeaders
 } = runtimeHeaders;
@@ -20,10 +22,15 @@ describe('runtime headers', () => {
     ]);
   });
 
-  it('maps the headers to a Next.js headers() entry', () => {
+  it('exposes a single source of truth for the WebContainer path prefix', () => {
+    expect(WEBCONTAINER_PATH_PREFIX).toBe('/courses/hi-agent/labs/');
+    expect(WEBCONTAINER_NEXT_SOURCE).toBe(`${WEBCONTAINER_PATH_PREFIX}:path*`);
+  });
+
+  it('scopes the Next.js headers() entry strictly to the labs route prefix', () => {
     expect(getWebcontainerHeaderEntries()).toEqual([
       {
-        source: '/:path*',
+        source: WEBCONTAINER_NEXT_SOURCE,
         headers: WEBCONTAINER_HEADERS
       }
     ]);
