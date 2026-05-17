@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Hi-Agent">
+  <defs>
+    <linearGradient id="haMaskGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF8A4C"/>
+      <stop offset="100%" stop-color="#E25A1F"/>
+    </linearGradient>
+    <linearGradient id="haMaskHi" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#FFEDD9"/>
+    </linearGradient>
+  </defs>
+  <!-- 完整背景，无圆角，maskable 安全区域 ≈ 中央 80% (102..410) -->
+  <rect x="0" y="0" width="512" height="512" fill="url(#haMaskGrad)"/>
+  <g fill="url(#haMaskHi)" transform="translate(48 48) scale(0.812)">
+    <!-- 'H' -->
+    <rect x="116" y="148" width="40" height="216" rx="8"/>
+    <rect x="116" y="240" width="120" height="32" rx="8"/>
+    <rect x="196" y="148" width="40" height="216" rx="8"/>
+    <!-- 'i' -->
+    <rect x="270" y="148" width="40" height="40" rx="8"/>
+    <rect x="270" y="208" width="40" height="156" rx="8"/>
+  </g>
+  <circle cx="364" cy="186" r="18" fill="#FFFFFF" opacity="0.92"/>
+  <circle cx="364" cy="186" r="8" fill="#E25A1F"/>
+</svg>

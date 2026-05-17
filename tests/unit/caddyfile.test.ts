@@ -63,4 +63,26 @@ describe('Caddy deployment headers', () => {
     expect(webcontainerHeaderBlock).toMatch(/Cross-Origin-Opener-Policy\s+"same-origin"/);
     expect(webcontainerHeaderBlock).toContain('Cross-Origin-Resource-Policy "cross-origin"');
   });
+
+  it('serves /sw.js with no-store so a stale Service Worker cannot lock users out', () => {
+    expect(caddyfile).toMatch(/@serviceWorker\s+path\s+\/sw\.js/);
+    const swBlock = extractBlock(caddyfile, /header\s+@serviceWorker\s*\{/);
+    expect(swBlock).not.toBe('');
+    expect(swBlock).toMatch(/Cache-Control\s+"no-store/);
+    expect(swBlock).toContain('Service-Worker-Allowed');
+  });
+
+  it('declares the web app manifest with the correct content-type', () => {
+    expect(caddyfile).toMatch(/@webManifest\s+path\s+\/manifest\.webmanifest/);
+    const manifestBlock = extractBlock(caddyfile, /header\s+@webManifest\s*\{/);
+    expect(manifestBlock).not.toBe('');
+    expect(manifestBlock).toContain('application/manifest+json');
+  });
+
+  it('caches PWA icons aggressively', () => {
+    expect(caddyfile).toMatch(/@pwaIcons\s+path\s+\/icons\/\*/);
+    expect(caddyfile).toMatch(
+      /header\s+@pwaIcons\s+Cache-Control\s+"public,\s*max-age=31536000,\s*immutable"/
+    );
+  });
 });

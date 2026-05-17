@@ -45,6 +45,26 @@
 	@webcontainerSnapshots path /webcontainer-snapshots/*
 	header @webcontainerSnapshots Cache-Control "public, max-age=31536000, immutable"
 
+	# PWA assets ------------------------------------------------------
+	# /sw.js MUST never be cached by intermediate proxies; otherwise a
+	# stale Service Worker can lock users out of new releases.
+	@serviceWorker path /sw.js
+	header @serviceWorker {
+		Cache-Control      "no-store, max-age=0"
+		Service-Worker-Allowed "/"
+	}
+
+	# Web app manifest – tiny, infrequent, but content-type matters.
+	@webManifest path /manifest.webmanifest
+	header @webManifest {
+		Content-Type "application/manifest+json; charset=utf-8"
+		Cache-Control "public, max-age=86400"
+	}
+
+	# PWA icons are content-addressed by name; safe to cache forever.
+	@pwaIcons path /icons/*
+	header @pwaIcons Cache-Control "public, max-age=31536000, immutable"
+
 	# Pagefind ships small WASM/JSON shards; make sure they're served
 	# with sensible MIME types.
 	@wasm path *.wasm

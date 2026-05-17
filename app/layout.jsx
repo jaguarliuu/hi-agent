@@ -11,6 +11,10 @@ import { ThemeTransitionToggle } from './lib/motion/theme-transition-toggle'
 import { ToastProvider } from './lib/motion/toast-context'
 import { HeaderAutohide } from './lib/header-autohide'
 import { CommentsBoundary } from './lib/comments/comments-boundary'
+import { RegisterSW } from './lib/pwa/register-sw'
+import { InstallPrompt } from './lib/pwa/install-prompt'
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
 export const metadata = {
   metadataBase: new URL('https://jaguarliuu.github.io/hi-agent'),
@@ -20,9 +24,28 @@ export const metadata = {
   },
   description: 'Hi-Agent 系列课程：围绕 AI Agent 工程的系统课程合集，从 Chat、Agent Loop、Tool、Context Engineering 到 Memory、Multi-Agent、Harness，并持续扩展更多 Agent 主题课程。',
   applicationName: 'Hi-Agent',
-  appleWebApp: { title: 'Hi-Agent' },
+  manifest: `${basePath}/manifest.webmanifest`,
+  appleWebApp: {
+    title: 'Hi-Agent',
+    capable: true,
+    statusBarStyle: 'default'
+  },
+  icons: {
+    icon: [
+      { url: `${basePath}/icons/favicon.svg`, type: 'image/svg+xml' },
+      { url: `${basePath}/icons/icon.svg`, type: 'image/svg+xml', sizes: 'any' }
+    ],
+    apple: [
+      { url: `${basePath}/icons/icon.svg`, type: 'image/svg+xml' }
+    ],
+    shortcut: [`${basePath}/icons/favicon.svg`]
+  },
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#FF7A3D' },
+    { media: '(prefers-color-scheme: dark)', color: '#1f1d1c' }
+  ],
   other: {
-    'msapplication-TileColor': '#fff'
+    'msapplication-TileColor': '#FF7A3D'
   }
 }
 
@@ -78,9 +101,11 @@ export default async function RootLayout({ children }) {
       <body>
         <ThemeSwitchRelocator />
         <HeaderAutohide />
+        <RegisterSW />
         <MotionProvider>
           <ToastProvider>
             <ReadingProgress />
+            <InstallPrompt />
             <Layout
               banner={banner}
               navbar={navbar}

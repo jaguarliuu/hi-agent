@@ -1,0 +1,59 @@
+{
+  "name": "Hi-Agent · Agent 工程系列课程",
+  "short_name": "Hi-Agent",
+  "description": "Hi-Agent 系列课程：围绕 AI Agent 工程的系统课程合集，从 Chat、Agent Loop、Tool、Context Engineering 到 Memory、Multi-Agent、Harness。",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "id": "hi-agent",
+  "start_url": "./courses/hi-agent/",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "any",
+  "theme_color": "#FF7A3D",
+  "background_color": "#ffffff",
+  "categories": ["education", "developer", "productivity"],
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "课程总览",
+      "short_name": "课程",
+      "description": "Hi-Agent 课程合集首页",
+      "url": "./courses/hi-agent/",
+      "icons": [
+        { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+      ]
+    },
+    {
+      "name": "Chat 入门",
+      "short_name": "Chat",
+      "description": "01 节 · 在浏览器里跑通第一个 Chat",
+      "url": "./courses/hi-agent/chat/01-getting-started/",
+      "icons": [
+        { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+      ]
+    },
+    {
+      "name": "Labs · WebContainers",
+      "short_name": "Labs",
+      "description": "Labs 01 · WebContainers Pilot",
+      "url": "./courses/hi-agent/labs/01-webcontainers-pilot/",
+      "icons": [
+        { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+      ]
+    }
+  ]
+}

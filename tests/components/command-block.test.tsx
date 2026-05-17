@@ -36,6 +36,8 @@ function createContextValue(): PlaygroundContextValue {
     manifest,
     state: {
       status: 'idle',
+      bootStage: 'idle',
+      bootProgress: 0,
       sectionId: null,
       activeFile: null,
       error: null
@@ -48,7 +50,8 @@ function createContextValue(): PlaygroundContextValue {
     openFile: vi.fn(),
     closeDrawer: vi.fn(),
     selectFile: vi.fn(),
-    updateActiveFile: vi.fn()
+    updateActiveFile: vi.fn(),
+    createFile: vi.fn().mockResolvedValue(undefined)
   };
 }
 describe('CommandBlock', () => {
