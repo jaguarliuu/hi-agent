@@ -31,14 +31,14 @@ export const COURSES = [
     startChapterSlug: 'chat',
     updatedAt: '2026-05-16',
     chapters: [
+      'begin',
       'chat',
       'agent-loop',
       'tool',
       'context-engineering',
       'memory',
       'multi-agent',
-      'harness',
-      'begin'
+      'harness'
     ]
   }
 ]
