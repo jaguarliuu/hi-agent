@@ -1,0 +1,62 @@
+{
+  "id": "chat-01-getting-started",
+  "title": "1.1 聊起来先",
+  "snapshotId": "chat-01-getting-started-v1",
+  "snapshotUrl": "/webcontainer-snapshots/chat-01-getting-started.bin",
+  "defaultOpenFile": "src/main.ts",
+  "startup": {
+    "installCommands": [
+      { "cmd": "npm", "args": ["install"] }
+    ],
+    "runCommands": [],
+    "env": ["OPENAI_BASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL"]
+  },
+  "blocks": [
+    {
+      "blockId": "install-deps",
+      "type": "command",
+      "label": "安装依赖",
+      "command": { "cmd": "npm", "args": ["install"] }
+    },
+    {
+      "blockId": "open-example",
+      "type": "project-open"
+    },
+    {
+      "blockId": "config-snippet",
+      "type": "file-snippet",
+      "path": "src/config.ts",
+      "anchor": "@anchor:load-config"
+    },
+    {
+      "blockId": "provider-snippet",
+      "type": "file-snippet",
+      "path": "src/model-provider.ts",
+      "anchor": "@anchor:create-model"
+    },
+    {
+      "blockId": "client-snippet",
+      "type": "file-snippet",
+      "path": "src/chat-client.ts",
+      "anchor": "@anchor:chat-client"
+    },
+    {
+      "blockId": "session-snippet",
+      "type": "file-snippet",
+      "path": "src/chat-session.ts",
+      "anchor": "@anchor:chat-session"
+    },
+    {
+      "blockId": "main-snippet",
+      "type": "file-snippet",
+      "path": "src/main.ts",
+      "anchor": "@anchor:main-entry"
+    },
+    {
+      "blockId": "run-demo",
+      "type": "command",
+      "label": "运行 Demo",
+      "command": { "cmd": "npm", "args": ["run", "chat"] }
+    }
+  ]
+}

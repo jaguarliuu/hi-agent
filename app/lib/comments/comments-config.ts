@@ -1,4 +1,4 @@
-import { WEBCONTAINER_PATH_PREFIX } from '@/app/lib/playground/runtime-headers.js';
+import { WEBCONTAINER_PATH_PREFIXES } from '@/app/lib/playground/runtime-headers.js';
 
 export type CommentsProvider = 'giscus' | 'utterances';
 
@@ -52,10 +52,16 @@ export function shouldShowComments(pathname: string | null | undefined): boolean
   if (!pathname) return false;
   if (pathname.startsWith('/studio')) return false;
   if (pathname.startsWith('/api')) return false;
-  if (pathname.startsWith(WEBCONTAINER_PATH_PREFIX)) return false;
   if (!pathname.startsWith('/courses/')) return false;
 
   const normalized = normalizePathname(pathname);
+  if (
+    WEBCONTAINER_PATH_PREFIXES.some((prefix) =>
+      normalized.startsWith(prefix.endsWith('/') ? prefix.slice(0, -1) : prefix)
+    )
+  ) {
+    return false;
+  }
   if (COMMENTS_PATH_BLOCKLIST.has(normalized)) return false;
 
   const segments = normalized.split('/').filter(Boolean);

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { WEBCONTAINER_PATH_PREFIX } from '../../app/lib/playground/runtime-headers.js';
+import { WEBCONTAINER_PATH_PREFIXES } from '../../app/lib/playground/runtime-headers.js';
 
 function escapeRegex(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
@@ -29,15 +29,15 @@ function extractBlock(source: string, openRegex: RegExp): string {
 describe('Caddy deployment headers', () => {
   let caddyfile = '';
   let globalHeaderBlock = '';
-  let labsHeaderBlock = '';
+  let webcontainerHeaderBlock = '';
 
   beforeAll(() => {
     caddyfile = readFileSync(resolve(process.cwd(), 'docker/Caddyfile'), 'utf8');
 
-    labsHeaderBlock = extractBlock(caddyfile, /header\s+@webcontainerLabs\s*\{/);
+    webcontainerHeaderBlock = extractBlock(caddyfile, /header\s+@webcontainerPages\s*\{/);
 
-    const sansLabs = caddyfile.replace(labsHeaderBlock, '');
-    globalHeaderBlock = extractBlock(sansLabs, /(^|\n)\s*header\s*\{/);
+    const sansWebcontainer = caddyfile.replace(webcontainerHeaderBlock, '');
+    globalHeaderBlock = extractBlock(sansWebcontainer, /(^|\n)\s*header\s*\{/);
   });
 
   it('does not leak cross-origin isolation headers into the global header block', () => {
@@ -47,16 +47,20 @@ describe('Caddy deployment headers', () => {
     expect(globalHeaderBlock).not.toContain('Cross-Origin-Resource-Policy');
   });
 
-  it('declares the @webcontainerLabs matcher with the shared path prefix constant', () => {
-    const escaped = escapeRegex(WEBCONTAINER_PATH_PREFIX);
-    expect(caddyfile).toMatch(new RegExp(`@webcontainerLabs\\s+path\\s+${escaped}\\*`));
+  it('declares the @webcontainerPages matcher with the shared path prefixes', () => {
+    expect(caddyfile).toMatch(/@webcontainerPages\s+path/);
+    for (const prefix of WEBCONTAINER_PATH_PREFIXES) {
+      const pattern = prefix.endsWith('/') ? `${prefix}*` : prefix;
+      expect(caddyfile).toMatch(new RegExp(escapeRegex(pattern)));
+    }
+    expect(caddyfile).toContain('/courses/hi-agent/chat/01-getting-started/*');
   });
 
-  it('enables cross-origin isolation only inside the @webcontainerLabs block', () => {
-    expect(labsHeaderBlock).not.toBe('');
-    expect(labsHeaderBlock).toContain('Cross-Origin-Embedder-Policy "require-corp"');
-    expect(labsHeaderBlock).toContain('Cross-Origin-Opener-Policy');
-    expect(labsHeaderBlock).toMatch(/Cross-Origin-Opener-Policy\s+"same-origin"/);
-    expect(labsHeaderBlock).toContain('Cross-Origin-Resource-Policy "cross-origin"');
+  it('enables cross-origin isolation only inside the @webcontainerPages block', () => {
+    expect(webcontainerHeaderBlock).not.toBe('');
+    expect(webcontainerHeaderBlock).toContain('Cross-Origin-Embedder-Policy "require-corp"');
+    expect(webcontainerHeaderBlock).toContain('Cross-Origin-Opener-Policy');
+    expect(webcontainerHeaderBlock).toMatch(/Cross-Origin-Opener-Policy\s+"same-origin"/);
+    expect(webcontainerHeaderBlock).toContain('Cross-Origin-Resource-Policy "cross-origin"');
   });
 });

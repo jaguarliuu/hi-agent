@@ -1,0 +1,19 @@
+{
+  "name": "hi-agent-chat-01-getting-started",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "chat": "tsx src/main.ts",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "^1.0.0",
+    "ai": "^5.0.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

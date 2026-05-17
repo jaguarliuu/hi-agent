@@ -62,7 +62,7 @@ async function loadModule() {
 describe('shouldShowComments / normalizePathname', () => {
   it('only enables comments on section pages with >=4 path segments', async () => {
     const { shouldShowComments } = await loadModule();
-    expect(shouldShowComments('/courses/hi-agent/chat/01-getting-started/')).toBe(true);
+    expect(shouldShowComments('/courses/hi-agent/chat/02-core-concepts/')).toBe(true);
     expect(shouldShowComments('/courses/hi-agent/chat/')).toBe(false);
     expect(shouldShowComments('/courses/hi-agent/')).toBe(false);
     expect(shouldShowComments('/courses/')).toBe(false);
@@ -70,11 +70,12 @@ describe('shouldShowComments / normalizePathname', () => {
     expect(shouldShowComments(null)).toBe(false);
   });
 
-  it('excludes studio, api, and labs paths', async () => {
+  it('excludes studio, api, labs, and WebContainer section paths', async () => {
     const { shouldShowComments } = await loadModule();
     expect(shouldShowComments('/studio/edit/')).toBe(false);
     expect(shouldShowComments('/api/health/')).toBe(false);
     expect(shouldShowComments('/courses/hi-agent/labs/01-webcontainers-pilot/')).toBe(false);
+    expect(shouldShowComments('/courses/hi-agent/chat/01-getting-started/')).toBe(false);
   });
 
   it('normalizes trailing slash, basePath, and case', async () => {
@@ -157,7 +158,7 @@ describe('CommentsBoundary integration', () => {
   });
 
   it('mounts after intersection on enabled paths', async () => {
-    pathnameState.value = '/courses/hi-agent/chat/01-getting-started/';
+    pathnameState.value = '/courses/hi-agent/chat/02-core-concepts/';
     const cfgMod = await import('@/app/lib/comments/comments-config');
     const prevRepoId = cfgMod.COMMENTS_CONFIG.giscus!.repoId;
     const prevCategoryId = cfgMod.COMMENTS_CONFIG.giscus!.categoryId;
@@ -196,7 +197,7 @@ describe('CommentsBoundary integration', () => {
         expect(screen.getByTestId('giscus-mock')).toBeInTheDocument();
       });
       const giscus = screen.getByTestId('giscus-mock');
-      expect(giscus.dataset.term).toBe('/courses/hi-agent/chat/01-getting-started');
+      expect(giscus.dataset.term).toBe('/courses/hi-agent/chat/02-core-concepts');
       expect(screen.getByText(/讨论与评论/)).toBeInTheDocument();
       expect(screen.getByText(/GitHub 隐私政策/)).toBeInTheDocument();
     } finally {

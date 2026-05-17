@@ -1,4 +1,5 @@
 import manifest from '@/examples/hi-agent/labs/01-webcontainers-pilot/manifest.json';
+import chatGettingStartedManifest from '@/examples/hi-agent/chat/01-getting-started/manifest.json';
 import {
   parsePlaygroundManifest,
   type PlaygroundManifest
@@ -19,6 +20,10 @@ const registry: Record<string, PlaygroundManifest> = {
   'labs-01-webcontainers-pilot': parsePlaygroundManifest({
     ...manifest,
     snapshotUrl: resolveManifestAssetPath(manifest.snapshotUrl)
+  }),
+  'chat-01-getting-started': parsePlaygroundManifest({
+    ...chatGettingStartedManifest,
+    snapshotUrl: resolveManifestAssetPath(chatGettingStartedManifest.snapshotUrl)
   })
 };
 

@@ -10,8 +10,8 @@ import { SourceLink } from '../../../../lib/source-link'
 # 1.1 聊起来先
 
 <Callout type="info">
-从本小节开始，整个Hi-Agent的实践便开始了，这是一个Java项目，至于为什么这个时代了还用Java
-别纠结，我只是因为熟悉，和想挑战下用Java做复杂Agent，课程里的内容是相通的～加油
+从本小节开始，整个 Hi-Agent 的实践便开始了。现在我们会直接使用 **TypeScript + Node.js** 来写示例项目，并把代码放进页面右侧的 WebContainer 里运行。
+这样你不需要在本地提前准备复杂环境，打开课程页面就能看到代码、编辑代码、运行代码。
 </Callout>
 
 无论一个 Agent 系统看起来多么复杂，它的核心入口始终离不开 Chat。
@@ -26,12 +26,18 @@ import { SourceLink } from '../../../../lib/source-link'
 
 因此，在这一小节里，我们不会一上来就谈复杂的工具调用、多 Agent 协作或者长期记忆，而是先回到最基础、也最关键的地方：
 
-搭建项目框架，准备 Mock 服务，启动项目，然后让 Agent 真正“聊起来”。
+搭建项目框架，准备模型连接器，启动项目，然后让 Agent 真正“聊起来”。
+
+<PlaygroundSection sectionId="chat-01-getting-started">
+
+<OpenProjectButton blockId="open-example">
+打开右侧 Playground
+</OpenProjectButton>
 
 ## 1.1.1 搭建脚手架
+
 <Callout type="default">
-这里我默认大家都是有Java基础的伙伴，新建一个 **Maven** 项目并不是多么复杂的事情，如果不会，也可以让AI Vibe一下；
-而你，我的伙伴，请把重点放在我都实现了哪些能力上
+这里我默认大家对 TypeScript 和 Node.js 有基本了解。新建项目本身不是重点，重点是看清楚我们把一次最小 Chat 调用拆成了哪些能力：配置、模型连接器、Chat Client、会话状态和命令行入口。
 </Callout>
 
 初始化项目的结构如下：
@@ -39,464 +45,336 @@ import { SourceLink } from '../../../../lib/source-link'
 <CodeBlock title="项目初始目录结构">
 
 ```bash
-λ ~/Desktop/jaguarliu/core/hi-agent-java/ tree
 .
-├── pom.xml
+├── package.json
+├── tsconfig.json
+├── .env.example
 └── src
-    ├── main
-    │   ├── java
-    │   │   └── com
-    │   │       └── rookie
-    │   │           └── stack
-    │   │               └── Main.java
-    │   └── resources
-    └── test
-        └── java
-
-9 directories, 2 files
+    ├── config.ts
+    ├── model-provider.ts
+    ├── chat-message.ts
+    ├── chat-client.ts
+    ├── chat-session.ts
+    └── main.ts
 ```
 
 </CodeBlock>
 
-接下来就是安装依赖，我们这里引入`openai-java`依赖
+接下来就是安装依赖。我们这里引入 Vercel 的 AI SDK，以及 OpenAI 兼容模型供应商适配器：
 
-<CodeBlock title="pom.xml — openai-java 依赖" defaultOpen>
+<CommandBlock blockId="install-deps">
 
-```xml
-<dependency>
-  <groupId>com.openai</groupId>
-  <artifactId>openai-java</artifactId>
-  <version>4.33.0</version>
-</dependency>
+```bash
+npm install
+```
+
+</CommandBlock>
+
+<CodeBlock title="package.json — 核心依赖" defaultOpen>
+
+```json
+{
+  "dependencies": {
+    "ai": "^5.0.0",
+    "@ai-sdk/openai-compatible": "^1.0.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
 ```
 
 </CodeBlock>
-<Callout type="error">
-这里注意一个神奇的问题，`openai-java`这个包需要从maven官方仓库拉取，如果你配置了阿里云仓库，那需要再加一下中央仓库
-在阿里云仓库里，只有4.9.0版本以前的`openai-java`
-</Callout>
 
-`openai-java` 是 OpenAI 官方提供的 Java 客户端库，主要用于在 Java 项目中调用 OpenAI API。但在实际工程里，我们也可以把它理解成一个 OpenAI 兼容协议的适配器。
+`ai` 是 Vercel AI SDK 的核心包，负责提供 `generateText` 这类统一调用接口。`@ai-sdk/openai-compatible` 则用于接入 OpenAI 兼容协议的模型服务。
 
 从 ChatGPT 火出圈之后，OpenAI 的接口协议逐渐变成了大模型应用开发中的一种事实标准。后续很多大模型厂商都开始兼容 OpenAI API 格式，包括我们常用的国内大模型服务商，比如 Qwen、DeepSeek、MiniMax、GLM 等。
 
-这意味着，只要这些厂商提供了 OpenAI 兼容接口，我们就可以通过配置不同的 base_url 和 api_key，直接使用 openai-java 来调用它们的模型服务。
+这意味着，只要这些厂商提供了 OpenAI 兼容接口，我们就可以通过配置不同的 base URL、API Key 和模型名，使用同一套代码调用不同厂商的模型服务。
 
-所以，在这一节里，我们选择 openai-java，并不只是为了调用 OpenAI 官方模型，更重要的是借助它统一不同模型厂商的接入方式。
+所以，在这一节里，我们选择 AI SDK，并不只是为了调用 OpenAI 官方模型，更重要的是借助它统一不同模型厂商的接入方式。
 
-接下来，我们还需要新建一个配置文件`.env`，用于存储我们的模型 API Key 和 Base URL。在我们的项目里，我基本上都会使用DeepSeek来做演示，当然如果你有其他的模型接入，按需配置即可。
+接下来，我们还需要新建一个配置文件 `.env`，用于存储模型 API Key 和 Base URL。在 WebContainer 里，你可以直接复制 `.env.example` 为 `.env`，再填入自己的配置。
 
-<CodeBlock title=".env — 模型接入配置" defaultOpen>
+<CodeBlock title=".env.example — DeepSeek 示例配置" defaultOpen>
 
 ```bash
 OPENAI_BASE_URL=https://api.deepseek.com
 OPENAI_API_KEY=sk-用自己的API-KEY
-OPENAI_MODEL=deepseek-v4-pro
+OPENAI_MODEL=deepseek-v4-flash
 ```
 
 </CodeBlock>
 
-<Callout type="error">
-如果你要把代码传到github之类的云端仓库里去，那请一定记得把.env文件加入到.gitignore里面，否则你的API Key会被泄露出去
-</Callout>
+如果你使用 Qwen，也可以换成下面这组 OpenAI 兼容配置：
 
-接下来，我们还需要一些辅助的依赖：
-
-<CodeBlock title="pom.xml — dotenv-java 依赖" defaultOpen>
-
-```xml
-<dependency>
-    <groupId>io.github.cdimascio</groupId>
-    <artifactId>dotenv-java</artifactId>
-    <version>3.2.0</version>
-</dependency>
-```
-
-</CodeBlock>
-
-## 1.1.2 实现配置解析和聊起来
-接下来，我们想和AI聊起来，其实特别简单，和大模型的交互，本质上还是请求一个远端的API，和我们日常去访问其他的服务，没有什么本质上的差异；
-
-因此，流程上和HTTP请求也没有什么特别大的差异，新建一个客户端（Client）然后构造特定的参数，发起特定的请求，最后解析响应即可。
-
-### 1.1.2.1 OpenAiConfig 配置解析
-我们先来解析一下我们的配置文件，从环境变量中获取 OpenAI_BASE_URL、OPENAI_API_KEY、OPENAI_MODEL 等参数。
-
-<CodeBlock title="OpenAiConfig.java — 配置解析 record（约 45 行）">
-
-```java
-import io.github.cdimascio.dotenv.Dotenv;
-import java.nio.file.Path;
-
-public record OpenAiConfig(String baseUrl, String apiKey, String model) {
-
-    public OpenAiConfig {
-        baseUrl = requireNonBlank(baseUrl, "baseUrl");
-        apiKey = requireNonBlank(apiKey, "apiKey");
-        model = requireNonBlank(model, "model");
-    }
-
-    public static OpenAiConfig load() {
-        return load(Path.of("."));
-    }
-
-    public static OpenAiConfig load(Path directory) {
-        Dotenv dotenv = Dotenv.configure()
-                .directory(directory.toAbsolutePath().toString())
-                .filename(".env")
-                .ignoreIfMissing()
-                .load();
-
-        return new OpenAiConfig(
-                requiredConfig(dotenv, "OPENAI_BASE_URL"),
-                requiredConfig(dotenv, "OPENAI_API_KEY"),
-                requiredConfig(dotenv, "OPENAI_MODEL"));
-    }
-
-    private static String requiredConfig(Dotenv dotenv, String key) {
-        String value = dotenv.get(key);
-        if (value == null || value.isBlank()) {
-            throw new IllegalStateException("Missing required config: " + key);
-        }
-        return value.trim();
-    }
-
-    private static String requireNonBlank(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        return value.trim();
-    }
-}
-```
-
-</CodeBlock>
-
-`OpenAiConfig`被设计成一个 record，因为它本质上只是一个只读的数据载体，没有业务状态变化。它只有三个字段：baseUrl、apiKey、model。
-它在紧凑构造器里做了统一校验，确保三个字段都不是空值或空白字符串。这里选择“创建时即校验”，而不是等到真正发请求时再报错，是为了让问题尽可能早暴露出来。
-
-具体实现上，用了 dotenv-java。通过 Dotenv.configure() 指定目录和文件名，然后在代码中逐个读取 OPENAI_BASE_URL、OPENAI_API_KEY、OPENAI_MODEL。如果某个配置缺失，就抛出明确的异常，比如 "Missing required config: OPENAI_MODEL"。这样用户看到报错时，能立刻知
-道缺的是哪一个键，而不是只得到一个模糊的空指针或认证失败。
-
-当然这里的配置我们后续需要扩展的还有很多，比如模型参数、超时时间、重试策略等，用到的时候，我们再来扩展。
-
-### 1.1.2.2 OpenAiChatClient聊起来
-
-<CodeBlock title="OpenAiChatClient.java — 单轮 Chat 封装（约 50 行）">
-
-```java
-public final class OpenAiChatClient implements AutoCloseable {
-
-    private final OpenAIClient client;
-    private final String model;
-
-    public OpenAiChatClient(OpenAIClient client, String model) {
-        this.client = Objects.requireNonNull(client, "client must not be null");
-        this.model = requireNonBlank(model, "model");
-    }
-
-    public static OpenAiChatClient fromEnvFile() {
-        OpenAiConfig config = OpenAiConfig.load();
-        OpenAIClient client = OpenAIOkHttpClient.builder()
-                .baseUrl(config.baseUrl())
-                .apiKey(config.apiKey())
-                .build();
-
-        return new OpenAiChatClient(client, config.model());
-    }
-
-    public String chat(String userPrompt) {
-        String normalizedPrompt = requireNonBlank(userPrompt, "userPrompt");
-
-        ChatCompletion completion = client.chat()
-                .completions()
-                .create(ChatCompletionCreateParams.builder()
-                        .model(model)
-                        .addUserMessage(normalizedPrompt)
-                        .build());
-
-        return completion.choices().stream()
-                .findFirst()
-                .map(ChatCompletion.Choice::message)
-                .flatMap(message -> message.content())
-                .filter(content -> !content.isBlank())
-                .orElseThrow(() -> new IllegalStateException("AI response did not contain assistant content"));
-    }
-
-    @Override
-    public void close() {
-        client.close();
-    }
-
-    private static String requireNonBlank(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        return value.trim();
-    }
-}
-```
-
-</CodeBlock>
-
-`OpenAiChatClient`是真正执行 AI 调用的类。它内部只保留两项状态：OpenAIClient client 和 String model，分别代表 SDK 客户端实例和当前模型名。
-
-当然，这里没有把客户端创建逻辑写死在构造器里，而是保留了一个可注入构造器这样做的原因是可测试性：测试时可以直接传入 mock 的 OpenAIClient，不需要真的连网络，也不依赖真实 .env。
-
-为了让业务代码使用起来更简单，又额外提供了一个静态工厂方法，这个方法内部先调用 OpenAiConfig.load() 拿到配置，再用 OpenAIOkHttpClient.builder() 设置 baseUrl 和 apiKey，最后构造
-OpenAiChatClient。
-
-这样，调用方既可以直接用默认方式启动，也可以在需要时手动注入自定义客户端。
-
-
-### 1.1.2.3 聊起来
-
-有了前面的封装，发起一个Chat那就再简单不过了：
-
-<CodeBlock title="OpenAiChatClientLiveTest.java — 首个联调测试">
-
-```java
-class OpenAiChatClientLiveTest {
-
-    private static final Logger log = LoggerFactory.getLogger(OpenAiChatClientLiveTest.class);
-
-    @Test
-    @EnabledIfSystemProperty(named = "openai.live.test", matches = "true")
-    void performsRealChatCompletion() {
-        try (OpenAiChatClient client = OpenAiChatClient.fromEnvFile()) {
-            String reply = client.chat("你好呀～");
-
-            System.out.println(reply);
-
-            assertNotNull(reply);
-            assertFalse(reply.isBlank());
-        }
-    }
-}
-```
-
-</CodeBlock>
-
-手动在ide里启动单元测试，或者你在终端里执行 `mvn test` 即可运行单元测试，一切顺利的话，你会得到如下输入：
-
-<CodeBlock title="终端输出 — 首次 Chat 成功">
+<CodeBlock title=".env — Qwen 示例配置" defaultOpen>
 
 ```bash
-你好呀！👋 很高兴见到你～
-
-我是DeepSeek，一个热心的AI助手。无论你想聊天、问问题、找资料，还是需要帮忙写作、分析、头脑风暴，我都随时准备着！
-
-今天有什么我可以帮你的吗？或者就是想随便聊聊也完全没问题～ 😊
-
-Process finished with exit code 0
+OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+OPENAI_API_KEY=sk-你的百炼APIKey
+OPENAI_MODEL=qwen-plus
 ```
 
 </CodeBlock>
 
-我们第一个Chat就跑通了，但是，现在我们的代码，你运行一次测试，就得去改一次测试里的提示词，这显然不是我们期望的，我需要让他支持对话，哪怕只是
-现在命令行窗口里输入一个提示词，他也能返回一个回复。我可以继续和他接着聊。
+<Callout type="warning">
+这里的 `.env` 只存在于你当前浏览器里的 WebContainer 文件系统中。它不会上传到本站服务器，不会被课程站点记录，也不会被我们存储。刷新页面、重置 Playground 或清理浏览器数据后，这些配置可能会消失，所以请只把它当作本地临时运行环境。
+</Callout>
+
+<Callout type="error">
+如果你把示例代码复制到自己的 GitHub 仓库里，请一定记得把 `.env` 加入 `.gitignore`，否则你的 API Key 会被泄露出去。
+</Callout>
+
+## 1.1.2 实现配置解析和聊起来
+
+接下来，我们想和 AI 聊起来，其实特别简单。和大模型的交互，本质上还是请求一个远端 API，和我们日常访问其他服务没有本质差异。
+
+因此，流程上和 HTTP 请求也没有特别大的差异：读取配置，创建模型连接器，构造消息，发起请求，最后解析响应即可。
+
+### 1.1.2.1 OpenAiConfig 配置解析
+
+我们先来解析 `.env`，从环境变量中获取 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_MODEL` 等参数。
+
+<RunnableCodeBlock blockId="config-snippet">
+
+```ts filename="src/config.ts"
+import 'dotenv/config';
+
+export interface OpenAiConfig {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+}
+
+export function loadConfig(): OpenAiConfig {
+  return {
+    baseUrl: readRequiredEnv('OPENAI_BASE_URL'),
+    apiKey: readRequiredEnv('OPENAI_API_KEY'),
+    model: readRequiredEnv('OPENAI_MODEL')
+  };
+}
+
+function readRequiredEnv(key: string): string {
+  const value = process.env[key]?.trim();
+  if (!value) {
+    throw new Error(
+      `Missing required config: ${key}. 请在 .env 中配置你的模型连接信息。`
+    );
+  }
+  return value;
+}
+```
+
+</RunnableCodeBlock>
+
+这里的 `OpenAiConfig` 本质上只是一个只读的数据载体，没有业务状态变化。它只有三个字段：`baseUrl`、`apiKey`、`model`。
+
+具体实现上，我们通过 `dotenv` 把 `.env` 加载到 `process.env`，再逐个读取 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_MODEL`。如果某个配置缺失，就抛出明确的错误，比如 `Missing required config: OPENAI_MODEL`。
+
+这类错误越早暴露越好。否则等到真正请求模型时，你可能只会看到认证失败、网络失败，或者一个很模糊的 SDK 报错。
+
+### 1.1.2.2 创建模型连接器
+
+接下来我们把 AI SDK 的 OpenAI 兼容适配器单独封装起来。
+
+<RunnableCodeBlock blockId="provider-snippet">
+
+```ts filename="src/model-provider.ts"
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import type { LanguageModel } from 'ai';
+import type { OpenAiConfig } from './config.js';
+
+export function createModel(config: OpenAiConfig): LanguageModel {
+  const provider = createOpenAICompatible({
+    name: 'openai-compatible',
+    apiKey: config.apiKey,
+    baseURL: config.baseUrl
+  });
+
+  return provider(config.model);
+}
+```
+
+</RunnableCodeBlock>
+
+这一层很薄，但很重要。业务代码不应该到处关心 `baseURL`、`apiKey`、供应商名称这些细节。后面如果我们想切换 DeepSeek、Qwen 或其他 OpenAI 兼容服务，只需要改配置，不需要改 Chat 逻辑。
+
+### 1.1.2.3 OpenAiChatClient 聊起来
+
+有了模型连接器之后，我们就可以封装真正执行 AI 调用的 `OpenAiChatClient`。
+
+<RunnableCodeBlock blockId="client-snippet">
+
+```ts filename="src/chat-client.ts"
+import { generateText } from 'ai';
+import type { LanguageModel } from 'ai';
+import { userMessage, type ChatMessage } from './chat-message.js';
+
+export class OpenAiChatClient {
+  constructor(private readonly model: LanguageModel) {}
+
+  async chat(userPrompt: string): Promise<string> {
+    return this.chatMessages([userMessage(userPrompt)]);
+  }
+
+  async chatMessages(messages: ChatMessage[]): Promise<string> {
+    if (messages.length === 0) {
+      throw new Error('messages must not be empty');
+    }
+
+    const result = await generateText({
+      model: this.model,
+      messages
+    });
+
+    const reply = result.text.trim();
+    if (!reply) {
+      throw new Error('AI response did not contain assistant content');
+    }
+
+    return reply;
+  }
+}
+```
+
+</RunnableCodeBlock>
+
+`OpenAiChatClient` 是真正执行 AI 调用的类。它内部只保留一个状态：当前模型实例 `model`。
+
+这里没有把配置读取和模型创建逻辑写死在构造器里，而是让外部把 `model` 传进来。这样做的原因和原来一样：可测试、可替换，也让每一层的职责更清楚。
+
+`chat(userPrompt)` 是单轮接口，内部只是把用户输入包装成一条 `user` 消息，再复用 `chatMessages(messages)`。这样逻辑只有一份，不会出现单轮和多轮两套不同实现。
+
+<CodeBlock title="ChatMessage — 内部消息模型" defaultOpen>
+
+```ts
+export type ChatRole = 'user' | 'assistant';
+
+export interface ChatMessage {
+  role: ChatRole;
+  content: string;
+}
+```
+
+</CodeBlock>
+
+这里我们暂时只保留两个角色：
+
+- `user`
+- `assistant`
+
+之所以只保留这两个角色，是因为当前目标只是“命令行多轮对话”的最小版本。先做最少模型，比一开始就把 `system`、`tool` 等角色全部引入更清楚。
+
+### 1.1.2.4 聊起来
+
+现在我们已经可以发起一次最小 Chat 调用了。示例项目里最终会从 `main.ts` 启动，但你可以先把它理解成下面这段流程：
+
+<CodeBlock title="单轮 Chat 调用流程" defaultOpen>
+
+```ts
+const config = loadConfig();
+const model = createModel(config);
+const client = new OpenAiChatClient(model);
+
+const reply = await client.chat('你好呀～');
+console.log(reply);
+```
+
+</CodeBlock>
+
+一切顺利的话，你会看到模型返回一段正常的助手回复。
+
+但现在还有一个问题：如果我们每次都在代码里改提示词，就不像真正聊天。我们需要让它支持对话，哪怕只是命令行里输入一句话，它也能返回一个回复，并且可以继续接着聊。
 
 ## 1.1.3 支持对话
-我们要实现的对话部分也没有那么复杂，当Main启动，我们就开启一个无限等待的循环，等待用户的输入，当用户输入之后，我们就调用OpenAiChatClient的chat方法，获取回复，最后打印回复。
-直到用户输入exit，或者停止了Main函数，我们才退出循环。
 
-当然在这里，我们还需要简单处理下上下文呢，既然是多论对话，那么我们就需要将完整的历史会话都传递给模型，让模型可以持续的在一个上下文里和我们进行交互，你甚至可以简单的理解为，这就是Context Engineering 的雏形。
+我们要实现的对话部分也没有那么复杂。当 `main.ts` 启动后，我们就开启一个循环，等待用户输入。当用户输入之后，就调用 `OpenAiChatSession`，获取回复，最后打印回复。
 
-### 1.1.3.1 先让 `OpenAiChatClient` 支持完整历史消息
+直到用户输入 `exit`，或者停止进程，我们才退出循环。
 
-前面提到了，多轮对话的本质不是“循环读取输入”，而是“每一轮请求都带上下文”。
+当然在这里，我们还需要简单处理上下文。既然是多轮对话，那么我们就需要将完整的历史会话传递给模型，让模型可以持续在同一个上下文里和我们交互。你甚至可以简单地理解为，这就是 Context Engineering 的雏形。
 
-如果 `OpenAiChatClient` 还只能接收一个 `String userPrompt`，那么后面就算把命令行循环写出来，也只是不断发单轮请求，根本不是真正的多轮聊天。所以第一步必须先解决这个问题：  客户端要能接收一组有顺序的历史消息。
+### 1.1.3.1 引入 `OpenAiChatSession` 管理会话状态
 
-为了表达历史消息，先引入了两个内部模型：
+多轮对话的本质不是“循环读取输入”，而是“每一轮请求都带上下文”。
 
-<CodeBlock title="ChatRole.java — 角色枚举" defaultOpen>
+所以我们新增一个会话管理类 `OpenAiChatSession`。
 
-```java
-enum ChatRole {
-    USER,
-    ASSISTANT
+<RunnableCodeBlock blockId="session-snippet">
+
+```ts filename="src/chat-session.ts"
+import {
+  assistantMessage,
+  userMessage,
+  type ChatMessage
+} from './chat-message.js';
+import type { OpenAiChatClient } from './chat-client.js';
+
+export class OpenAiChatSession {
+  private readonly history: ChatMessage[] = [];
+
+  constructor(private readonly client: OpenAiChatClient) {}
+
+  async send(userInput: string): Promise<string> {
+    const currentUserMessage = userMessage(userInput);
+    const requestMessages = [...this.history, currentUserMessage];
+
+    const reply = await this.client.chatMessages(requestMessages);
+    this.history.push(currentUserMessage, assistantMessage(reply));
+
+    return reply;
+  }
+
+  getHistory(): readonly ChatMessage[] {
+    return [...this.history];
+  }
 }
 ```
 
-</CodeBlock>
+</RunnableCodeBlock>
 
-<CodeBlock title="ChatMessage.java — 消息 record" defaultOpen>
-
-```java
-record ChatMessage(ChatRole role, String content) {
-
-    ChatMessage {
-        Objects.requireNonNull(role, "role must not be null");
-        if (content == null || content.isBlank()) {
-            throw new IllegalArgumentException("content must not be blank");
-        }
-        content = content.trim();
-    }
-}
-```
-
-</CodeBlock>
-
-`ChatRole` 只有两个值：
-
-- `USER`
-- `ASSISTANT`
-
-之所以只保留这两个角色，是因为当前我们目标只是“命令行多轮对话”的最小版本。 先做最少模型，比一开始就把 `SYSTEM`、`TOOL`、`DEVELOPER` 全部引入更清楚。
-
-`ChatMessage` 则负责保存一条内部消息：
-
-- `role`
-- `content`
-
-并且在构造时完成最基本的校验：
-
-- `role` 不能为空
-- `content` 不能为空白
-- `content` 自动 `trim()`
-
-### 1.1.3.2 扩展`OpenAiChatClient`
-
-扩展后的`OpenAiChatClient`保留了原来的单轮接口：
-
-<CodeBlock title="单轮接口（保留）" defaultOpen>
-
-```java
-public String chat(String userPrompt)
-```
-
-</CodeBlock>
-
-同时新增了多轮接口：
-
-<CodeBlock title="多轮接口（新增）" defaultOpen>
-
-```java
-public String chat(List<ChatMessage> messages)
-```
-
-</CodeBlock>
-
-这里保留旧接口而不是直接删掉，有两个原因：
-
-1. 不破坏前面已经写好的单轮内容
-2. 让多轮能力成为对单轮能力的平滑扩展
-
-单轮方法现在只是把输入包装成一条 `USER` 消息，再复用多轮方法。这样逻辑只有一份，不会出现两套不同实现。
-
-真正的多轮处理逻辑在 
-
-<CodeBlock title="chat(List&lt;ChatMessage&gt;) — 多轮请求完整实现">
-
-```java
-public String chat(List<ChatMessage> messages) {
-    if (messages == null || messages.isEmpty()) {
-        throw new IllegalArgumentException("messages must not be empty");
-    }
-
-    ChatCompletionCreateParams.Builder builder = ChatCompletionCreateParams.builder().model(model);
-    for (ChatMessage message : messages) {
-        if (message.role() == ChatRole.USER) {
-            builder.addUserMessage(message.content());
-        } else if (message.role() == ChatRole.ASSISTANT) {
-            builder.addAssistantMessage(message.content());
-        } else {
-            throw new IllegalArgumentException("Unsupported chat role: " + message.role());
-        }
-    }
-
-    ChatCompletion completion = client.chat()
-            .completions()
-            .create(builder.build());
-
-    return completion.choices().stream()
-            .findFirst()
-            .map(ChatCompletion.Choice::message)
-            .flatMap(message -> message.content())
-            .filter(content -> !content.isBlank())
-            .orElseThrow(() -> new IllegalStateException("AI response did not contain assistant content"));
-}
-```
-
-</CodeBlock>
-
-- 遍历 `List<ChatMessage>`
-- `USER` 转成 `builder.addUserMessage(...)`
-- `ASSISTANT` 转成 `builder.addAssistantMessage(...)`
-- 再统一调用 `openai-java`
-
-### 1.1.3.3 引入 `OpenAiChatSession` 管理会话状态
-
-当客户端已经能处理完整消息列表之后，第二步才轮到会话状态。新增会话管理类 `OpenAiChatSession`。
-
-<CodeBlock title="OpenAiChatSession.java — 会话状态管理（约 25 行）">
-
-```java
-public final class OpenAiChatSession {
-
-    private final OpenAiChatClient client;
-    private final List<ChatMessage> history = new ArrayList<>();
-
-    public OpenAiChatSession(OpenAiChatClient client) {
-        this.client = Objects.requireNonNull(client, "client must not be null");
-    }
-
-    public String send(String userInput) {
-        ChatMessage userMessage = new ChatMessage(ChatRole.USER, userInput);
-        List<ChatMessage> requestMessages = new ArrayList<>(history);
-        requestMessages.add(userMessage);
-
-        String reply = client.chat(requestMessages);
-        history.add(userMessage);
-        history.add(new ChatMessage(ChatRole.ASSISTANT, reply));
-        return reply;
-    }
-
-    List<ChatMessage> history() {
-        return List.copyOf(history);
-    }
-}
-```
-
-</CodeBlock>
-
-`OpenAiChatSession`内部只保留了：
+`OpenAiChatSession` 内部只保留了：
 
 - `OpenAiChatClient client`
-- `List<ChatMessage> history`
+- `ChatMessage[] history`
 
 对外只暴露一个核心方法：
 
 <CodeBlock title="send — 会话对外接口" defaultOpen>
 
-```java
-public String send(String userInput)
+```ts
+async send(userInput: string): Promise<string>
 ```
 
 </CodeBlock>
 
-这方法的流程很简单：
+这个方法的流程很简单：
 
-1. 把当前用户输入包装成 `ChatMessage(USER, userInput)`
+1. 把当前用户输入包装成 `user` 消息
 2. 基于旧历史复制出一份临时请求列表
 3. 把当前用户消息加到临时请求列表末尾
-4. 调用 `client.chat(requestMessages)`
-5. 调用成功后，再把 user 和 assistant 两条消息写回正式历史
+4. 调用 `client.chatMessages(requestMessages)`
+5. 调用成功后，再把 `user` 和 `assistant` 两条消息写回正式历史
 
-“成功后再写历史”这是这一层最关键的设计点。如果一开始就把用户消息写进正式历史，一旦请求失败，就会留下这种不一致状态：
+“成功后再写历史”是这一层最关键的设计点。如果一开始就把用户消息写进正式历史，一旦请求失败，就会留下这种不一致状态：
 
 - 用户已经说了一句话
 - assistant 没有回应
 
 这会让下一轮上下文变得奇怪，也会让调试变复杂。
 
-所以这里采用了更稳妥的策略：  
-先构造临时请求，调用成功之后，再把这一轮 user 和 assistant 一起提交到历史中。
+所以这里采用更稳妥的策略：先构造临时请求，调用成功之后，再把这一轮 user 和 assistant 一起提交到历史中。
 
-### 1.1.3.4 最后把能力接到 `Main`
-`Main`只负责交互流程：
+### 1.1.3.2 最后把能力接到 `main.ts`
 
+`main.ts` 只负责交互流程：
+
+- 读取配置
+- 创建模型连接器
 - 创建 `OpenAiChatClient`
 - 创建 `OpenAiChatSession`
 - 打印启动提示
@@ -507,106 +385,89 @@ public String send(String userInput)
 - 打印 AI 回复
 - 如果本轮请求失败，只打印错误，不直接杀掉整个进程
 
-<CodeBlock title="Main.java — 命令行交互入口（约 35 行）">
+<RunnableCodeBlock blockId="main-snippet">
 
-```java
-public class Main {
-    public static void main(String[] args) {
-        try (OpenAiChatClient client = OpenAiChatClient.fromEnvFile();
-             BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
+```ts filename="src/main.ts"
+import { createInterface } from 'node:readline/promises';
+import { stdin as input, stdout as output } from 'node:process';
+import { loadConfig } from './config.js';
+import { createModel } from './model-provider.js';
+import { OpenAiChatClient } from './chat-client.js';
+import { OpenAiChatSession } from './chat-session.js';
 
-            OpenAiChatSession session = new OpenAiChatSession(client);
-            System.out.println("Chat started. Type 'exit' to quit.");
+async function main() {
+  const config = loadConfig();
+  const model = createModel(config);
+  const client = new OpenAiChatClient(model);
+  const session = new OpenAiChatSession(client);
+  const terminal = createInterface({ input, output });
 
-            while (true) {
-                System.out.print("You: ");
-                String line = reader.readLine();
-                if (line == null) {
-                    System.out.println();
-                    break;
-                }
+  console.log('Chat started. Type "exit" to quit.');
 
-                String input = line.trim();
-                if (input.isEmpty()) {
-                    continue;
-                }
-                if ("exit".equals(input)) {
-                    break;
-                }
+  try {
+    while (true) {
+      const line = await terminal.question('You: ');
+      const userInput = line.trim();
 
-                try {
-                    String reply = session.send(input);
-                    System.out.println("AI: " + reply);
-                } catch (Exception exception) {
-                    System.out.println("AI error: " + exception.getMessage());
-                }
-            }
-        } catch (Exception exception) {
-            System.err.println("Failed to start chat: " + exception.getMessage());
-        }
+      if (!userInput) continue;
+      if (userInput === 'exit') break;
+
+      try {
+        const reply = await session.send(userInput);
+        console.log(`AI: ${reply}`);
+      } catch (error) {
+        console.error(`AI error: ${formatError(error)}`);
+      }
     }
+  } finally {
+    terminal.close();
+  }
 }
 ```
 
-</CodeBlock>
+</RunnableCodeBlock>
 
-这里刻意保持 `Main` 很薄，不让它保存历史，也不让它自己拼 OpenAI SDK 请求。 这样入口层只做“交互编排”，不会和会话逻辑耦在一起。
+这里刻意保持 `main.ts` 很薄，不让它保存历史，也不让它自己拼模型请求。这样入口层只做“交互编排”，不会和会话逻辑耦在一起。
 
-完成之后，启动`Main`类可以像下面这样在命令行里连续对话：
+配置好 `.env` 之后，就可以运行：
 
-<CodeBlock title="实际运行对话实录（点击展开查看完整回复）">
+<CommandBlock blockId="run-demo">
 
-```markdown
-Chat started. Type 'exit' to quit.
-You: 你好，我是jaguar，你介绍下你自己
+```bash
+npm run chat
+```
+
+</CommandBlock>
+
+实际运行时大概会像这样：
+
+<CodeBlock title="实际运行对话示例" defaultOpen>
+
+```text
+Chat started. Type "exit" to quit.
+You: 你好，我是 jaguar，你介绍下你自己
 AI: 你好，Jaguar！很高兴认识你。
-
-我是 **DeepSeek**，一个由深度求索公司倾心打造的 AI 助手。你可以把我理解为一个住在你手机或电脑里的智能伙伴。
-
-简单介绍下我自己：
-
--   **我的核心能力**：
-    -   **海量“内存”**：我拥有 1M 的上下文处理能力，可以一次性帮你读完像《三体》三部曲那么大体量的书籍，并回答其中的细节。
-    -   **多才多艺**：我擅长文字交流、知识问答、创意写作、代码编写、逻辑推理，甚至还能陪你闲聊解闷。
-    -   **文件处理**：虽然我不支持多模态图像识别，但我能读取你上传的图片、PDF、Word、Excel、PPT 等文件里的文字信息，帮你整理和分析。
-    -   **联网搜索**：如果你需要最新的信息，记得在网页端或 App 上手动打开联网搜索按键，我就能帮你梳理全网资讯。
-
--   **我的性格特点**：
-    -   **完全免费**：目前没有任何收费计划，你可以尽情使用。
-    -   **热情细腻**：我会尽力用温暖、友好的方式和你交流。
-    -   **支持语音**：在 App 端（官方应用商店可下载）可以直接用语音和我聊天，很方便。
-
-怎么样？如果你有任何想聊的话题、想解决的问题，或者只是想找个伴说说话，随时可以丢给我。
-
-有什么我可以立刻为你效劳的吗？
-You: 你知道今天是几月几号吗
-AI: 抱歉，Jaguar，我目前无法直接知道确切的日期。作为一个AI模型，我没有内置的实时时钟，也无法主动获取系统时间。
-
-不过，如果你需要知道今天的日期，可以**开启联网搜索功能**，我就能帮你查到准确的时间。或者你也可以直接告诉我今天是几月几号，我很乐意帮你安排日程、计算日期，或者做任何与时间相关的规划！
+...
 You: 你还记得我是谁吗
-AI: 当然记得，Jaguar！在这一轮对话里，你一开始就告诉我你是 **jaguar**，所以我一直记着你的名字。
-
-不过，要诚实地告诉你，我的记忆只在当前这次聊天中有效。一旦对话结束、窗口关闭或会话超时，我就会忘记这次聊天的所有细节。下次你再来找我时，我可能就认不出你了，除非你再次告诉我你的名字。
-
-如果你希望我长期记住一些关键信息（比如你的偏好、重要事项等），可以随时把你希望我记的东西整理成文本发给我，然后由你自己保存下来，下次需要时再复制给我——我可以帮你把这些要点整理好。这样你就能在未来的对话中快速让我“恢复记忆”了。
-
-有什么想聊的吗？我随时在。
-You: 
+AI: 当然记得，你刚才告诉我你是 jaguar。
+You: exit
 ```
 
 </CodeBlock>
 
-## 1.1.3.5 总结
+## 1.1.4 总结
+
 到这里，我们已经完成了 Hi-Agent 的第一步：让项目真正聊起来。
 
 这一小节我们没有一上来就做复杂的 Agent Loop，也没有急着接入 Tool、Memory 或 Multi-Agent，而是先把最基础的 Chat 入口搭了起来。因为对任何 Agent 来说，能被唤醒、能接收消息、能返回结果，都是后续一切能力的前提。
 
 在代码层面，我们完成了几件事：
-- 首先，用 .env 管理模型配置，把 OPENAI_BASE_URL、OPENAI_API_KEY 和 OPENAI_MODEL 从代码中拆出来，避免把敏感信息写死在程序里。
-- 然后，封装了 OpenAiConfig，专门负责配置读取和校验。这样一旦配置缺失，程序可以在启动阶段直接报出明确错误，而不是等到请求模型时才出现一堆难以定位的问题。
-- 接着，我们实现了 OpenAiChatClient，把和 OpenAI 兼容协议交互的逻辑集中封装起来。业务层不需要关心 SDK 的具体调用细节，只需要调用 chat(...) 方法即可。
-- 在此基础上，我们又进一步让 OpenAiChatClient 支持完整历史消息列表，使它不再只能进行单轮问答，而是具备了多轮对话的基础能力。
-- 最后，通过 OpenAiChatSession 管理会话历史，再把它接入 Main 命令行入口，实现了一个最小可用的命令行聊天程序。
+
+- 首先，用 `.env` 管理模型配置，把 `OPENAI_BASE_URL`、`OPENAI_API_KEY` 和 `OPENAI_MODEL` 从代码中拆出来，避免把敏感信息写死在程序里。
+- 然后，封装了 `OpenAiConfig`，专门负责配置读取和校验。这样一旦配置缺失，程序可以在启动阶段直接报出明确错误。
+- 接着，通过 `createModel` 把 AI SDK 的 OpenAI 兼容适配器封装起来，让 DeepSeek、Qwen 这类模型供应商可以通过配置切换。
+- 在此基础上，我们实现了 `OpenAiChatClient`，把和模型交互的逻辑集中封装起来。
+- 最后，通过 `OpenAiChatSession` 管理会话历史，再把它接入 `main.ts` 命令行入口，实现了一个最小可用的命令行聊天程序。
 
 虽然这个版本还非常简单，但它已经具备了一个 Agent 系统最早期的雏形：
 
@@ -628,19 +489,19 @@ You:
 
 但现在，先别急。
 
-这一节的目标已经完成：
-我们搭好了项目骨架，也让 Agent 开口说话了。
+这一节的目标已经完成：我们搭好了项目骨架，也让 Agent 开口说话了。
 
 接下来，我们就可以在这个最小 Chat 系统的基础上，继续拆解 Agent 的核心概念，逐步把它从一个“能聊天的程序”，推进成一个真正“能做事的 Agent”。
 
 <SourceLink
-  type="commit"
-  repo="java"
-  sha="b09d501329ac8fb5154c2a09fb81f7c278cb264e"
-  title="feat: add OpenAI CLI multi-turn chat example"
-  description="本节对应的完整提交：新增 ChatRole / ChatMessage / OpenAiChatSession，并扩展 OpenAiChatClient 支持完整历史消息，Main 接入多轮命令行交互。"
+  type="repo"
+  repo="docs"
+  title="本节 TypeScript 示例项目"
+  description="本节示例位于 examples/hi-agent/chat/01-getting-started/workspace，使用 TypeScript、Node.js 和 Vercel AI SDK 接入 OpenAI 兼容模型。"
 />
 
 ---
 
 **下一节** → <DocLink href="/courses/hi-agent/chat/02-core-concepts">1.2 核心概念</DocLink>
+
+</PlaygroundSection>

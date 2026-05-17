@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import pilotManifest from '@/examples/hi-agent/labs/01-webcontainers-pilot/manifest.json';
+import chatGettingStartedManifest from '@/examples/hi-agent/chat/01-getting-started/manifest.json';
 import {
   parsePlaygroundManifest,
   playgroundManifestSchema
@@ -16,6 +17,28 @@ describe('playground manifest schema', () => {
       'open-example',
       'main-ts-snippet',
       'config-snippet',
+      'run-demo'
+    ]);
+  });
+
+  it('parses the chat getting started manifest and exposes the expected ids', () => {
+    const manifest = parsePlaygroundManifest(chatGettingStartedManifest);
+
+    expect(manifest.id).toBe('chat-01-getting-started');
+    expect(manifest.defaultOpenFile).toBe('src/main.ts');
+    expect(manifest.startup.env).toEqual([
+      'OPENAI_BASE_URL',
+      'OPENAI_API_KEY',
+      'OPENAI_MODEL'
+    ]);
+    expect(manifest.blocks.map((block) => block.blockId)).toEqual([
+      'install-deps',
+      'open-example',
+      'config-snippet',
+      'provider-snippet',
+      'client-snippet',
+      'session-snippet',
+      'main-snippet',
       'run-demo'
     ]);
   });

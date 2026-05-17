@@ -18,8 +18,8 @@
 	# --- WebContainers requirements ---------------------------------
 	# COOP/COEP are mandatory for `crossOriginIsolated`, which in turn
 	# is required for SharedArrayBuffer / WebContainer boot.
-	@webcontainerLabs path /courses/hi-agent/labs/*
-	header @webcontainerLabs {
+	@webcontainerPages path /courses/hi-agent/labs/* /courses/hi-agent/chat/01-getting-started /courses/hi-agent/chat/01-getting-started/*
+	header @webcontainerPages {
 		Cross-Origin-Embedder-Policy "require-corp"
 		Cross-Origin-Opener-Policy   "same-origin"
 		Cross-Origin-Resource-Policy "cross-origin"
