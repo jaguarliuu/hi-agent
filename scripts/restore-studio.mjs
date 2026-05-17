@@ -7,7 +7,7 @@
  * restore — this script is a defensive safety net, not a hard requirement.
  */
 
-import { rename, rm, readdir, readFile, writeFile } from 'node:fs/promises'
+import { rename, rm, readdir, readFile, writeFile, cp } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -20,6 +20,27 @@ const TARGETS = [
   { to: 'app/studio', from: 'app__studio' },
   { to: 'app/api/studio', from: 'app__api__studio' }
 ]
+
+/**
+ * 与 strip-studio.mjs 中的 moveAcrossDevices 对称：rename 优先，
+ * 容器 / 跨卷场景遇到 EXDEV / EPERM 时降级为 cp -r + rm -rf。
+ */
+async function moveAcrossDevices(src, dest) {
+  try {
+    await rename(src, dest)
+    return 'rename'
+  } catch (err) {
+    if (err && (err.code === 'EXDEV' || err.code === 'EPERM')) {
+      console.warn(
+        `[restore-studio] rename hit ${err.code}, falling back to cp+rm: ${src} -> ${dest}`
+      )
+      await cp(src, dest, { recursive: true, force: true })
+      await rm(src, { recursive: true, force: true })
+      return 'copy'
+    }
+    throw err
+  }
+}
 
 async function moveBack({ from, to }) {
   const src = path.join(trashRoot, from)
@@ -34,8 +55,8 @@ async function moveBack({ from, to }) {
     )
     return
   }
-  await rename(src, dest)
-  console.log(`[restore-studio] restored .studio-trash/${from} -> ${to}`)
+  const mode = await moveAcrossDevices(src, dest)
+  console.log(`[restore-studio] restored (${mode}) .studio-trash/${from} -> ${to}`)
 }
 
 async function restoreRootMeta() {

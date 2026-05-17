@@ -15,7 +15,7 @@
  * never fail because of this hook.
  */
 
-import { mkdir, rename, stat, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, rename, stat, readFile, writeFile, cp, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -37,6 +37,28 @@ async function safeStat(p) {
   }
 }
 
+/**
+ * 把 src 移动到 dest。优先走 fs.rename（同设备零拷贝、原子）。
+ * 在容器 / Docker bind-mount / 跨卷场景下 rename 会抛 EXDEV / EPERM，
+ * 此时降级为 cp -r + rm -rf 的"复制后删除"语义，保持等价行为。
+ */
+async function moveAcrossDevices(src, dest) {
+  try {
+    await rename(src, dest)
+    return 'rename'
+  } catch (err) {
+    if (err && (err.code === 'EXDEV' || err.code === 'EPERM')) {
+      console.warn(
+        `[strip-studio] rename hit ${err.code}, falling back to cp+rm: ${src} -> ${dest}`
+      )
+      await cp(src, dest, { recursive: true, force: true })
+      await rm(src, { recursive: true, force: true })
+      return 'copy'
+    }
+    throw err
+  }
+}
+
 async function moveOut({ from, to }) {
   const src = path.join(projectRoot, from)
   if (!existsSync(src)) {
@@ -49,11 +71,10 @@ async function moveOut({ from, to }) {
     console.warn(
       `[strip-studio] trash slot already occupied, removing prior: ${dest}`
     )
-    const fs = await import('node:fs/promises')
-    await fs.rm(dest, { recursive: true, force: true })
+    await rm(dest, { recursive: true, force: true })
   }
-  await rename(src, dest)
-  console.log(`[strip-studio] moved ${from} -> .studio-trash/${to}`)
+  const mode = await moveAcrossDevices(src, dest)
+  console.log(`[strip-studio] moved (${mode}) ${from} -> .studio-trash/${to}`)
 }
 
 /**
