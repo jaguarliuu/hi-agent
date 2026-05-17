@@ -21,14 +21,81 @@ export interface InteractiveShellHandle {
 let activeShell: InteractiveShellHandle | null = null;
 let activeShellSectionId: string | null = null;
 
-async function fetchSnapshot(url: string) {
+async function fetchSnapshot(
+  url: string,
+  onProgress?: (loaded: number, total: number | null) => void
+) {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch snapshot: ${url}`);
   }
 
-  return response.arrayBuffer();
+  const totalHeader =
+    typeof response.headers?.get === 'function'
+      ? response.headers.get('content-length')
+      : null;
+  const total = totalHeader ? Number.parseInt(totalHeader, 10) : null;
+  const totalOrNull = Number.isFinite(total) && total !== null ? total : null;
+
+  if (!response.body || typeof response.body.getReader !== 'function') {
+    const buffer = await response.arrayBuffer();
+    onProgress?.(buffer.byteLength, totalOrNull ?? buffer.byteLength);
+    return buffer;
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let loaded = 0;
+  // Surface an initial 0% so UI can react before the first chunk arrives.
+  onProgress?.(0, totalOrNull);
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      chunks.push(value);
+      loaded += value.byteLength;
+      onProgress?.(loaded, totalOrNull);
+    }
+  }
+
+  const merged = new Uint8Array(loaded);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return merged.buffer;
 }
+
+/**
+ * Warm the HTTP cache for a snapshot without mounting it. Safe to call from
+ * idle callbacks while the user is reading the surrounding documentation.
+ */
+export async function prefetchSnapshot(url: string) {
+  if (typeof fetch !== 'function') return;
+  try {
+    await fetch(url, { credentials: 'omit', cache: 'force-cache' });
+  } catch {
+    // Network/CORS errors here are not actionable; the real fetch on open
+    // will surface a meaningful failure.
+  }
+}
+
+/**
+ * Eagerly boot the WebContainer runtime without touching any workspace. Used
+ * to overlap WASM startup with the time the user spends reading the page.
+ */
+export async function prebootWebcontainer() {
+  if (typeof window === 'undefined') return;
+  if (!window.crossOriginIsolated) return;
+  try {
+    await getWebcontainer();
+  } catch {
+    // Swallow boot errors during prewarm; the next user-initiated open will
+    // trigger a real boot attempt with proper error reporting.
+  }
+}
+
 
 function getManifestEnv(manifest: PlaygroundManifest) {
   const env: Record<string, string> = {};
@@ -86,14 +153,23 @@ export async function getWebcontainer() {
   return bootPromise;
 }
 
-export async function mountSectionWorkspace(manifest: PlaygroundManifest) {
+export async function mountSectionWorkspace(
+  manifest: PlaygroundManifest,
+  options: { onSnapshotProgress?: (loaded: number, total: number | null) => void } = {}
+) {
   const webcontainer = await getWebcontainer();
   if (mountedSectionId === manifest.id) {
+    options.onSnapshotProgress?.(1, 1);
     return webcontainer;
   }
 
   const restored = await loadCachedWorkspace(manifest.id, manifest.snapshotId);
-  const snapshot = restored ?? (await fetchSnapshot(manifest.snapshotUrl));
+  const snapshot =
+    restored ??
+    (await fetchSnapshot(manifest.snapshotUrl, options.onSnapshotProgress));
+  if (restored) {
+    options.onSnapshotProgress?.(1, 1);
+  }
   await webcontainer.mount(snapshot);
   mountedSectionId = manifest.id;
   preparedSectionId = null;
@@ -101,8 +177,11 @@ export async function mountSectionWorkspace(manifest: PlaygroundManifest) {
   return webcontainer;
 }
 
-export async function prepareSectionWorkspace(manifest: PlaygroundManifest) {
-  const webcontainer = await mountSectionWorkspace(manifest);
+export async function prepareSectionWorkspace(
+  manifest: PlaygroundManifest,
+  options: { onSnapshotProgress?: (loaded: number, total: number | null) => void } = {}
+) {
+  const webcontainer = await mountSectionWorkspace(manifest, options);
 
   if (preparedSectionId !== manifest.id) {
     const env = getSpawnOptionsEnv(manifest);

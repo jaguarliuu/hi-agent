@@ -39,6 +39,12 @@
 	@hashedAssets path /_next/static/* /_pagefind/*
 	header @hashedAssets Cache-Control "public, max-age=31536000, immutable"
 
+	# WebContainer snapshots are content-addressed (`*-vN.bin` / file
+	# names embedded in the manifest); cache them aggressively so a
+	# second visit to a course page hydrates the runtime instantly.
+	@webcontainerSnapshots path /webcontainer-snapshots/*
+	header @webcontainerSnapshots Cache-Control "public, max-age=31536000, immutable"
+
 	# Pagefind ships small WASM/JSON shards; make sure they're served
 	# with sensible MIME types.
 	@wasm path *.wasm

@@ -189,6 +189,12 @@ export function PlaygroundDrawer({
   const activeTabTitle = state.activeFile?.split('/').at(-1) ?? 'welcome.ts';
   const transitionState = isTransitionActive ? 'active' : 'idle';
   const bootStageLabel = getBootStageLabel(state.bootStage);
+  const showBootProgress =
+    state.status !== 'ready' &&
+    state.status !== 'running' &&
+    state.status !== 'error' &&
+    state.status !== 'unsupported';
+  const progressPercent = Math.max(0, Math.min(100, Math.round(state.bootProgress)));
 
   function handleTransitionEnd(event: React.TransitionEvent<HTMLElement>) {
     if (event.target !== event.currentTarget || event.propertyName !== 'transform') {
@@ -242,7 +248,20 @@ export function PlaygroundDrawer({
               data-boot-stage={state.bootStage}
               data-status={state.status}
             >
-              {bootStageLabel ?? state.status}
+              {showBootProgress && bootStageLabel ? (
+                <>
+                  <span className="ha-playground-status-label">{bootStageLabel}</span>
+                  <span className="ha-playground-status-progress" aria-hidden="true">
+                    <span
+                      className="ha-playground-status-progress-fill"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </span>
+                  <span className="ha-playground-status-percent">{progressPercent}%</span>
+                </>
+              ) : (
+                bootStageLabel ?? state.status
+              )}
             </span>
             <button
               type="button"

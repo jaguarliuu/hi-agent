@@ -244,7 +244,8 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
 
     async function advanceBootStage(
       bootStage: Exclude<PlaygroundBootStage, 'idle' | 'ready'>,
-      status: 'booting' | 'loading'
+      status: 'booting' | 'loading',
+      progress?: number
     ) {
       if (!(await waitForBootStageVisibility())) {
         return false;
@@ -254,7 +255,8 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
         type: 'BOOT_STAGE_CHANGED',
         sectionId,
         bootStage,
-        status
+        status,
+        progress
       });
       lastBootStageAt = performance.now();
       return true;
@@ -272,7 +274,7 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
 
     try {
       dispatch({ type: 'BOOT_STARTED', sectionId });
-      if (!(await advanceBootStage('prelude', 'booting'))) {
+      if (!(await advanceBootStage('prelude', 'booting', 5))) {
         return;
       }
 
@@ -285,7 +287,7 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
         return;
       }
 
-      if (!(await advanceBootStage('loading-kernel', 'booting'))) {
+      if (!(await advanceBootStage('loading-kernel', 'booting', 15))) {
         return;
       }
 
@@ -295,14 +297,28 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
         return;
       }
 
-      if (!(await advanceBootStage('mounting-snapshot', 'loading'))) {
+      if (!(await advanceBootStage('mounting-snapshot', 'loading', 25))) {
         return;
       }
 
-      await prepareSectionWorkspace(nextManifest);
+      await prepareSectionWorkspace(nextManifest, {
+        onSnapshotProgress: (loaded, total) => {
+          if (!isActiveRequest(requestId)) return;
+          if (total && total > 0) {
+            const ratio = loaded / total;
+            const mapped = 25 + ratio * 55;
+            dispatch({
+              type: 'BOOT_PROGRESS',
+              sectionId,
+              progress: mapped
+            });
+          }
+        }
+      });
       if (!isActiveRequest(requestId)) {
         return;
       }
+      dispatch({ type: 'BOOT_PROGRESS', sectionId, progress: 80 });
 
       const workspaceFiles = await listWorkspaceFiles();
 
@@ -349,7 +365,7 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
         return;
       }
 
-      if (!(await advanceBootStage('starting-shell', 'loading'))) {
+      if (!(await advanceBootStage('starting-shell', 'loading', 90))) {
         return;
       }
 

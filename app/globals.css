@@ -1689,6 +1689,56 @@ html.dark .mermaid .node path {
   background: rgba(255, 157, 122, 0.1);
 }
 
+.ha-playground-status-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ha-playground-status-progress {
+  position: relative;
+  display: inline-block;
+  width: 96px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.ha-playground-status-progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #8ab4ff 0%, #569cd6 100%);
+  transition: width var(--ha-motion-duration-md)
+    var(--ha-motion-ease-standard);
+}
+
+.ha-playground-status-percent {
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.ha-playground[data-playground-theme='light'] .ha-playground-status-progress {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.ha-playground[data-playground-theme='light'] .ha-playground-status-progress-fill {
+  background: linear-gradient(90deg, #1d6fd8 0%, #5a9bf0 100%);
+}
+
+.ha-playground[data-playground-theme='light'] .ha-playground-status-percent {
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.ha-playground-status:has(.ha-playground-status-progress) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+}
+
 .ha-playground-close {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);

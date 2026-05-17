@@ -112,6 +112,7 @@ function createContextValue(): PlaygroundContextValue {
     state: {
       status: 'ready',
       bootStage: 'ready',
+      bootProgress: 100,
       sectionId: manifest.id,
       activeFile: 'src/main.ts',
       error: null
