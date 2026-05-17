@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from '../motion/use-reduced-motion';
 import { usePlayground } from './playground-provider';
 import { PlaygroundEditor } from './playground-editor';
@@ -12,6 +12,9 @@ export interface PlaygroundDrawerProps {
   phase: 'opening' | 'open' | 'closing';
   onPhaseComplete: (phase: 'opening' | 'open' | 'closing') => void;
 }
+
+const DRAWER_WIDTH_STORAGE_KEY = 'ha-playground-drawer-width';
+const MIN_DRAWER_WIDTH = 480;
 
 export function PlaygroundDrawer({
   phase,
@@ -25,19 +28,105 @@ export function PlaygroundDrawer({
     activeFileAnchor,
     closeDrawer,
     selectFile,
-    updateActiveFile
+    updateActiveFile,
+    createFile
   } = usePlayground();
   const [terminalVisible, setTerminalVisible] = useState(true);
   const [isTransitionActive, setIsTransitionActive] = useState(false);
+  const [drawerWidth, setDrawerWidth] = useState<number | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
   const theme = usePlaygroundTheme();
   const reducedMotion = useReducedMotion();
   const latestPhaseRef = useRef(phase);
   const latestOnPhaseCompleteRef = useRef(onPhaseComplete);
   const latestTransitionActiveRef = useRef(isTransitionActive);
+  const drawerRef = useRef<HTMLElement | null>(null);
 
   latestPhaseRef.current = phase;
   latestOnPhaseCompleteRef.current = onPhaseComplete;
   latestTransitionActiveRef.current = isTransitionActive;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem(DRAWER_WIDTH_STORAGE_KEY);
+    if (!stored) return;
+    const parsed = Number.parseInt(stored, 10);
+    if (Number.isFinite(parsed) && parsed >= MIN_DRAWER_WIDTH) {
+      setDrawerWidth(parsed);
+    }
+  }, []);
+
+  const startResize = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    const handle = event.currentTarget;
+    handle.setPointerCapture(event.pointerId);
+    setIsResizing(true);
+
+    const maxWidth = window.innerWidth * 0.96;
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const next = Math.min(
+        Math.max(window.innerWidth - moveEvent.clientX, MIN_DRAWER_WIDTH),
+        maxWidth
+      );
+      setDrawerWidth(next);
+    };
+
+    const handlePointerUp = () => {
+      setIsResizing(false);
+      handle.removeEventListener('pointermove', handlePointerMove);
+      handle.removeEventListener('pointerup', handlePointerUp);
+      handle.removeEventListener('pointercancel', handlePointerUp);
+      try {
+        handle.releasePointerCapture(event.pointerId);
+      } catch {}
+      setDrawerWidth((current) => {
+        if (current !== null) {
+          window.localStorage.setItem(
+            DRAWER_WIDTH_STORAGE_KEY,
+            String(Math.round(current))
+          );
+        }
+        return current;
+      });
+    };
+
+    handle.addEventListener('pointermove', handlePointerMove);
+    handle.addEventListener('pointerup', handlePointerUp);
+    handle.addEventListener('pointercancel', handlePointerUp);
+  }, []);
+
+  function openCreateDialog() {
+    setNewFileName('.env');
+    setCreateError(null);
+    setCreateDialogOpen(true);
+  }
+
+  function closeCreateDialog() {
+    setCreateDialogOpen(false);
+    setNewFileName('');
+    setCreateError(null);
+  }
+
+  async function handleCreateFile(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const value = newFileName.trim();
+    if (!value) {
+      setCreateError('请填写文件名');
+      return;
+    }
+    try {
+      await createFile(value);
+      closeCreateDialog();
+    } catch (error) {
+      setCreateError(
+        error instanceof Error ? error.message : '创建失败，请重试。'
+      );
+    }
+  }
 
   useEffect(() => {
     if (typeof document === 'undefined') {
@@ -123,12 +212,25 @@ export function PlaygroundDrawer({
       />
       <aside
         className="ha-playground"
+        ref={drawerRef}
         data-playground-theme={theme}
         data-drawer-phase={phase}
         data-drawer-transition={transitionState}
+        data-resizing={isResizing ? 'true' : 'false'}
         aria-label="Runnable playground"
         onTransitionEnd={handleTransitionEnd}
+        style={
+          drawerWidth !== null
+            ? ({ ['--ha-playground-width' as string]: `${drawerWidth}px` } as React.CSSProperties)
+            : undefined
+        }
       >
+        <button
+          type="button"
+          className="ha-playground-resize-handle"
+          aria-label="拖动以调整 Playground 宽度"
+          onPointerDown={startResize}
+        />
         <header className="ha-playground-header">
           <div className="ha-playground-brand">
             <span className="ha-playground-brand-mark">{'</>'}</span>
@@ -180,7 +282,18 @@ export function PlaygroundDrawer({
           <div className="ha-playground-sidebar">
             <div className="ha-playground-sidebar-header">
               <span>资源管理器</span>
-              <span className="ha-playground-sidebar-badge">WORKSPACE</span>
+              <div className="ha-playground-sidebar-header-actions">
+                <button
+                  type="button"
+                  className="ha-playground-sidebar-action"
+                  aria-label="新建文件"
+                  title="新建文件"
+                  onClick={openCreateDialog}
+                >
+                  <NewFileIcon />
+                </button>
+                <span className="ha-playground-sidebar-badge">WORKSPACE</span>
+              </div>
             </div>
             <PlaygroundFileTree
               files={files}
@@ -222,6 +335,54 @@ export function PlaygroundDrawer({
             ) : null}
           </div>
         </div>
+
+        {createDialogOpen ? (
+          <div
+            className="ha-playground-dialog-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-label="新建文件"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) closeCreateDialog();
+            }}
+          >
+            <form className="ha-playground-dialog" onSubmit={handleCreateFile}>
+              <h3>新建文件</h3>
+              <p>输入相对工作区根目录的路径，例如 <code>.env</code> 或 <code>src/config.ts</code>。</p>
+              <input
+                autoFocus
+                className="ha-playground-dialog-input"
+                type="text"
+                value={newFileName}
+                placeholder=".env"
+                onChange={(event) => {
+                  setNewFileName(event.target.value);
+                  setCreateError(null);
+                }}
+              />
+              {createError ? (
+                <p className="ha-playground-dialog-error" role="alert">
+                  {createError}
+                </p>
+              ) : null}
+              <div className="ha-playground-dialog-actions">
+                <button
+                  type="button"
+                  className="ha-playground-dialog-button"
+                  onClick={closeCreateDialog}
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className="ha-playground-dialog-button is-primary"
+                >
+                  创建
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : null}
       </aside>
     </>
   );
@@ -270,6 +431,27 @@ function TerminalIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="1.4"
+      />
+    </svg>
+  );
+}
+
+function NewFileIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16">
+      <path
+        d="M4 2.5h5l3 3v8H4z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.3"
+      />
+      <path
+        d="M8 9v3M6.5 10.5h3"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.3"
       />
     </svg>
   );

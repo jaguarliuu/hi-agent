@@ -116,10 +116,23 @@ export async function prepareSectionWorkspace(manifest: PlaygroundManifest) {
         throw new Error(`Install command failed: ${command.cmd} ${command.args.join(' ')}`);
       }
     }
+    await ensureBinariesExecutable(webcontainer);
     preparedSectionId = manifest.id;
   }
 
   return webcontainer;
+}
+
+async function ensureBinariesExecutable(webcontainer: WebContainer) {
+  try {
+    const proc = await webcontainer.spawn('jsh', [
+      '-c',
+      'if [ -d node_modules/.bin ]; then chmod -R +x node_modules/.bin 2>/dev/null || true; fi'
+    ]);
+    await proc.exit;
+  } catch {
+    // best-effort; ignore if jsh is unavailable in this snapshot
+  }
 }
 
 async function walkWorkspaceDirectory(
@@ -163,6 +176,50 @@ export async function readWorkspaceFile(path: string) {
 export async function writeWorkspaceFile(path: string, content: string) {
   const webcontainer = await getWebcontainer();
   await webcontainer.fs.writeFile(path, content);
+}
+
+export async function workspaceFileExists(path: string) {
+  const webcontainer = await getWebcontainer();
+  try {
+    await webcontainer.fs.readFile(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function createWorkspaceFile(path: string, content = '') {
+  const webcontainer = await getWebcontainer();
+  const slashIndex = path.lastIndexOf('/');
+  if (slashIndex > 0) {
+    const dir = path.slice(0, slashIndex);
+    await webcontainer.fs.mkdir(dir, { recursive: true });
+  }
+  await webcontainer.fs.writeFile(path, content);
+}
+
+export async function watchWorkspace(onChange: () => void) {
+  const webcontainer = await getWebcontainer();
+  let cancelled = false;
+  let watcher: { close: () => void } | null = null;
+  try {
+    const result = webcontainer.fs.watch(
+      '.',
+      { recursive: true },
+      () => {
+        if (!cancelled) onChange();
+      }
+    );
+    watcher = result as unknown as { close: () => void };
+  } catch {
+    return () => {};
+  }
+  return () => {
+    cancelled = true;
+    try {
+      watcher?.close?.();
+    } catch {}
+  };
 }
 
 export async function runManifestCommand(

@@ -67,7 +67,10 @@ vi.mock('@/app/lib/playground/webcontainer-manager', () => ({
   runStartupCommands: runStartupCommandsMock,
   writeWorkspaceFile: writeWorkspaceFileMock,
   ensureInteractiveShell: ensureInteractiveShellMock,
-  teardownInteractiveShell: teardownInteractiveShellMock
+  teardownInteractiveShell: teardownInteractiveShellMock,
+  watchWorkspace: vi.fn().mockResolvedValue(() => {}),
+  createWorkspaceFile: vi.fn().mockResolvedValue(undefined),
+  workspaceFileExists: vi.fn().mockResolvedValue(false)
 }));
 
 const manifest: PlaygroundManifest = {
@@ -128,7 +131,8 @@ function createContextValue(): PlaygroundContextValue {
     openFile: vi.fn(),
     closeDrawer: vi.fn(),
     selectFile: vi.fn(),
-    updateActiveFile: vi.fn()
+    updateActiveFile: vi.fn(),
+    createFile: vi.fn()
   };
 }
 

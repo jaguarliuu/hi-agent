@@ -33,7 +33,10 @@ import {
   runManifestCommand,
   runStartupCommands,
   teardownInteractiveShell,
-  writeWorkspaceFile
+  watchWorkspace,
+  writeWorkspaceFile,
+  createWorkspaceFile,
+  workspaceFileExists
 } from './webcontainer-manager';
 
 export interface PlaygroundFileEntry {
@@ -53,6 +56,7 @@ export interface PlaygroundContextValue {
   closeDrawer: () => void;
   selectFile: (path: string) => Promise<void>;
   updateActiveFile: (next: string) => Promise<void>;
+  createFile: (path: string) => Promise<void>;
 }
 
 export const PlaygroundContext = createContext<PlaygroundContextValue | null>(null);
@@ -95,6 +99,9 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
   const [activeFileContent, setActiveFileContent] = useState('');
   const [activeFileAnchor, setActiveFileAnchor] = useState<string | null>(null);
   const activeRequestIdRef = useRef(0);
+  const stateRef = useRef<PlaygroundState>(state);
+  stateRef.current = state;
+  const lastLocalWriteRef = useRef<{ path: string; at: number }>({ path: '', at: 0 });
   const isDrawerVisible = drawerPhase !== 'closed';
   const isOpen = isDrawerVisible;
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
@@ -105,6 +112,74 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
     }
     setPortalTarget(document.body);
   }, []);
+
+  useEffect(() => {
+    if (state.status !== 'ready' && state.status !== 'running') {
+      return;
+    }
+    if (!state.sectionId) {
+      return;
+    }
+
+    let disposed = false;
+    let dispose: (() => void) | undefined;
+    let pending: number | null = null;
+
+    const scheduleRefresh = () => {
+      if (pending !== null) return;
+      pending = window.setTimeout(async () => {
+        pending = null;
+        if (disposed) return;
+        try {
+          const workspaceFiles = await listWorkspaceFiles();
+          if (disposed) return;
+          startTransition(() => {
+            setFiles(toFileEntries(workspaceFiles));
+          });
+
+          const activePath = stateRef.current.activeFile;
+          if (!activePath) return;
+          const lastWrite = lastLocalWriteRef.current;
+          if (
+            lastWrite.path === activePath &&
+            Date.now() - lastWrite.at < 400
+          ) {
+            return;
+          }
+          if (!workspaceFiles.includes(activePath)) {
+            return;
+          }
+          const fresh = await readWorkspaceFile(activePath);
+          if (disposed) return;
+          startTransition(() => {
+            setActiveFileContent((current) =>
+              current === fresh ? current : fresh
+            );
+          });
+        } catch {
+          // workspace may have been remounted; ignore transient errors
+        }
+      }, 150);
+    };
+
+    (async () => {
+      const stop = await watchWorkspace(scheduleRefresh);
+      if (disposed) {
+        stop();
+        return;
+      }
+      dispose = stop;
+    })();
+
+    return () => {
+      disposed = true;
+      if (pending !== null) {
+        window.clearTimeout(pending);
+        pending = null;
+      }
+      dispose?.();
+    };
+  }, [state.sectionId, state.status]);
 
   function resetDrawerState(sectionId: string) {
     setFiles([]);
@@ -332,7 +407,25 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
     startTransition(() => {
       setActiveFileContent(next);
     });
+    lastLocalWriteRef.current = { path: state.activeFile, at: Date.now() };
     await writeWorkspaceFile(state.activeFile, next);
+  }
+
+  async function createFile(path: string) {
+    const trimmed = path.trim().replace(/^\/+/, '');
+    if (!trimmed) return;
+    if (await workspaceFileExists(trimmed)) {
+      throw new Error(`文件已存在：${trimmed}`);
+    }
+    lastLocalWriteRef.current = { path: trimmed, at: Date.now() };
+    await createWorkspaceFile(trimmed, '');
+    const workspaceFiles = await listWorkspaceFiles();
+    startTransition(() => {
+      setFiles(toFileEntries(workspaceFiles));
+    });
+    if (state.sectionId) {
+      await loadFile(trimmed, null, state.sectionId, activeRequestIdRef.current);
+    }
   }
 
   function closeDrawer() {
@@ -371,7 +464,8 @@ export function PlaygroundProvider({ children }: PlaygroundProviderProps) {
     openFile: (sectionId, blockId) => openSection(sectionId, 'file', blockId),
     closeDrawer,
     selectFile,
-    updateActiveFile
+    updateActiveFile,
+    createFile
   };
 
   return (

@@ -1534,8 +1534,9 @@ html.dark .mermaid .node path {
 .ha-playground {
   position: fixed;
   inset: 0 0 0 auto;
-  width: min(1080px, 63vw);
-  min-width: 820px;
+  width: var(--ha-playground-width, min(1080px, 63vw));
+  min-width: 480px;
+  max-width: 96vw;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -1547,6 +1548,40 @@ html.dark .mermaid .node path {
     var(--ha-motion-ease-standard);
   will-change: transform;
   z-index: 70;
+}
+
+.ha-playground[data-resizing='true'] {
+  transition: none;
+  user-select: none;
+}
+
+.ha-playground-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  width: 8px;
+  cursor: ew-resize;
+  z-index: 71;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.ha-playground-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: transparent;
+  transition: background-color 0.15s ease;
+}
+
+.ha-playground-resize-handle:hover::after,
+.ha-playground[data-resizing='true'] .ha-playground-resize-handle::after {
+  background: rgba(138, 180, 255, 0.55);
 }
 
 .ha-playground[data-drawer-phase='opening'][data-drawer-transition='active'],
@@ -1743,6 +1778,135 @@ html.dark .mermaid .node path {
 .ha-playground-sidebar-badge {
   color: rgba(255, 255, 255, 0.38);
   font-size: 10px;
+}
+
+.ha-playground-sidebar-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ha-playground-sidebar-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.ha-playground-sidebar-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+.ha-playground-sidebar-action:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.ha-playground-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 80;
+}
+
+.ha-playground-dialog {
+  width: min(420px, 90%);
+  padding: 18px 20px 16px;
+  background: #1f2229;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.92);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ha-playground-dialog h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ha-playground-dialog p {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.ha-playground-dialog code {
+  font-family: 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.ha-playground-dialog-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.95);
+  font-family: 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 13px;
+  outline: none;
+}
+
+.ha-playground-dialog-input:focus {
+  border-color: rgba(138, 180, 255, 0.55);
+}
+
+.ha-playground-dialog-error {
+  color: #ff9d7a;
+  font-size: 12px;
+}
+
+.ha-playground-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ha-playground-dialog-button {
+  min-height: 28px;
+  padding: 0 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ha-playground-dialog-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.ha-playground-dialog-button.is-primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.ha-playground-dialog-button.is-primary:hover {
+  background: #1e4fc7;
+  border-color: #1e4fc7;
 }
 
 .ha-playground-tree {

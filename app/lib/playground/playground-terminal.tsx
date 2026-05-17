@@ -102,6 +102,68 @@ export function PlaygroundTerminal({
     xtermRef.current = term;
     fitAddonRef.current = fit;
 
+    async function pasteFromClipboard() {
+      const shell = shellRef.current;
+      if (!shell) return;
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          await shell.input.write(text);
+          setInteractiveError(null);
+        }
+      } catch {
+        setInteractiveError(
+          '无法读取剪贴板，请检查浏览器权限后重试。'
+        );
+      }
+    }
+
+    term.attachCustomKeyEventHandler((event) => {
+      if (event.type !== 'keydown') return true;
+      const isPasteCombo =
+        (event.ctrlKey || event.metaKey) &&
+        !event.altKey &&
+        (event.key === 'v' || event.key === 'V');
+      if (isPasteCombo) {
+        event.preventDefault();
+        void pasteFromClipboard();
+        return false;
+      }
+      const isCopyCombo =
+        (event.ctrlKey || event.metaKey) &&
+        !event.altKey &&
+        (event.key === 'c' || event.key === 'C') &&
+        term.hasSelection();
+      if (isCopyCombo) {
+        const selection = term.getSelection();
+        if (selection) {
+          event.preventDefault();
+          void navigator.clipboard.writeText(selection).catch(() => {});
+          return false;
+        }
+      }
+      return true;
+    });
+
+    const handlePasteEvent = (event: ClipboardEvent) => {
+      const shell = shellRef.current;
+      if (!shell) return;
+      const text = event.clipboardData?.getData('text');
+      if (!text) return;
+      event.preventDefault();
+      void shell.input.write(text).catch(() => {
+        setInteractiveError('粘贴写入失败，请重启 playground 后重试。');
+      });
+    };
+
+    const handleContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+      void pasteFromClipboard();
+    };
+
+    host.addEventListener('paste', handlePasteEvent as EventListener);
+    host.addEventListener('contextmenu', handleContextMenu);
+
     const runFit = () => {
       try {
         fit.fit();
@@ -120,6 +182,8 @@ export function PlaygroundTerminal({
     resizeObserverRef.current = observer;
 
     return () => {
+      host.removeEventListener('paste', handlePasteEvent as EventListener);
+      host.removeEventListener('contextmenu', handleContextMenu);
       observer.disconnect();
       resizeObserverRef.current = null;
       dataDisposableRef.current?.dispose();
