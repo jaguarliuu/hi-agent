@@ -1,0 +1,97 @@
+.ha-comments {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 80rem;
+  margin: 3rem auto 0;
+  padding: 2rem 1.5rem 0;
+  border-top: 1px solid var(--ha-border);
+}
+
+@media (min-width: 768px) {
+  .ha-comments {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .ha-comments {
+    padding-left: 3.5rem;
+    padding-right: 3.5rem;
+  }
+}
+
+.ha-comments-heading {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ha-fg);
+  margin: 0 0 0.75rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ha-comments-heading::before {
+  content: '';
+  width: 4px;
+  height: 1.1em;
+  background: var(--ha-accent);
+  border-radius: 2px;
+}
+
+.ha-comments-privacy {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--ha-fg-muted);
+  background: var(--ha-bg-subtle);
+  border: 1px solid var(--ha-border);
+  border-radius: 6px;
+  padding: 0.625rem 0.875rem;
+  margin: 0 0 1rem 0;
+}
+
+.ha-comments-privacy a {
+  color: var(--ha-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ha-comments-fallback {
+  font-size: 0.875rem;
+  color: var(--ha-fg-muted);
+  padding: 0.875rem 1rem;
+  background: var(--ha-accent-soft);
+  border: 1px dashed var(--ha-border-strong);
+  border-radius: 6px;
+  margin-top: 0.75rem;
+}
+
+.ha-comments-fallback a {
+  color: var(--ha-accent);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ha-comments-frame {
+  min-height: 280px;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ha-comments-frame :global(.giscus),
+.ha-comments-frame .giscus,
+.ha-comments-frame iframe.giscus-frame {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.ha-comments-config-warning {
+  font-size: 0.8125rem;
+  color: var(--ha-fg-muted);
+  background: var(--ha-bg-subtle);
+  border: 1px dashed var(--ha-border-strong);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+}

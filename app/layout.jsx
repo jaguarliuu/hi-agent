@@ -10,6 +10,7 @@ import { ReadingProgress } from './lib/reading-progress'
 import { ThemeTransitionToggle } from './lib/motion/theme-transition-toggle'
 import { ToastProvider } from './lib/motion/toast-context'
 import { HeaderAutohide } from './lib/header-autohide'
+import { CommentsBoundary } from './lib/comments/comments-boundary'
 
 export const metadata = {
   metadataBase: new URL('https://jaguarliuu.github.io/hi-agent'),
@@ -93,7 +94,10 @@ export default async function RootLayout({ children }) {
               toc={{ backToTop: '回到顶部' }}
             >
               <ThemeTransitionToggle />
-              <RouteMotionShell>{children}</RouteMotionShell>
+              <RouteMotionShell>
+                {children}
+                <CommentsBoundary />
+              </RouteMotionShell>
             </Layout>
           </ToastProvider>
         </MotionProvider>
