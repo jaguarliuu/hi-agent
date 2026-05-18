@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
   const ok = await verifyPassword(row.passwordHash, parsed.data.current_password);
   if (!ok) {
-    return jsonError('UNAUTHORIZED', { reason: 'wrong_current_password' });
+    return jsonError('INVALID_INPUT', { reason: 'wrong_current_password' });
   }
 
   const hash = await hashPassword(parsed.data.new_password);

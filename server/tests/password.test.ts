@@ -7,6 +7,7 @@ import {
 } from '@/lib/password';
 import { POST as setPOST } from '@/app/api/auth/password/set/route';
 import { POST as changePOST } from '@/app/api/auth/password/change/route';
+import { ERROR_CODES } from '@/lib/errors';
 
 describe('password lib', () => {
   it('hashes and verifies a strong password', async () => {
@@ -60,6 +61,16 @@ describe('POST /api/auth/password/change', () => {
     expect(body.code).toBe('UNAUTHORIZED');
   });
 
-  // TODO(后续 PR)：403 password_not_set / 401 wrong_current_password / 200 + revokeOtherSessions
+  it('error code map: INVALID_INPUT -> 400, UNAUTHORIZED -> 401 (semantics for wrong_current_password)', () => {
+    // wrong_current_password 必须使用 INVALID_INPUT (400)，避免前端在 401 时清 sid 把已登录用户踢出
+    expect(ERROR_CODES.INVALID_INPUT.http).toBe(400);
+    expect(ERROR_CODES.UNAUTHORIZED.http).toBe(401);
+  });
+
+  it.todo('change: 400 when current_password is wrong (logged in)');
+  // 该用例需 fixture cookie，跟 password set 200 / change 200 一起在后续 PR 补
+  // 此处仅锁定错误码语义：不应使用 401（避免前端误判 session 失效）
+
+  // TODO(后续 PR)：403 password_not_set / 200 + revokeOtherSessions
   // 用例需要 setup.ts 注入登录态。
 });
