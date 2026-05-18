@@ -181,7 +181,7 @@ docker run --rm -p 8080:80 hi-agent-docs:latest
    sudo mkdir -p /opt/hi-agent
    ```
 
-2. 拷贝并填写环境变量：
+2. 拷贝并填写环境变量（**仅首次执行；如服务器上已有 `/opt/hi-agent/.env` 则跳过此步，避免覆盖运维手填值**）：
 
    ```bash
    scp deploy/.env.example user@server:/opt/hi-agent/.env
@@ -193,13 +193,13 @@ docker run --rm -p 8080:80 hi-agent-docs:latest
    - `OTP_PEPPER`：`openssl rand -base64 32`
    - `DATABASE_URL`：`postgresql://hi_agent:<上面密码>@postgres:5432/hi_agent?schema=public`
    - `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM`：你的发信账号
-   - `SESSION_COOKIE_SECURE=true`（生产环境必开）
+   - `SECURE_COOKIE=true`（生产环境必开）
 
-   `HI_AGENT_IMAGE` 与 `AUTH_SERVER_IMAGE` 由 CNB 流水线在每次部署时写入，**手工不要填**。
+   `HI_AGENT_IMAGE` 与 `AUTH_SERVER_IMAGE` 由 CNB 流水线在每次部署时 in-place 更新（仅替换这两行，其它字段保留），**手工不要填**。
 
 3. 触发 CNB 流水线（push 到 main），构建结束后流水线会：
-   - 在服务器上写入 `/opt/hi-agent/.env`（追加 IMAGE 变量）
-   - `docker compose pull && up -d --force-recreate`
+   - 在服务器上 in-place 更新 `/opt/hi-agent/.env` 的 `HI_AGENT_IMAGE` / `AUTH_SERVER_IMAGE` 两行（`sed` 删行 + 追加）
+   - `docker compose pull && docker compose up -d --force-recreate --remove-orphans`
 
 4. 烟测：
 

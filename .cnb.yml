@@ -218,11 +218,23 @@ main:
             fi
         - name: write env file
           script: |
-            set -eu
+            set -euo pipefail
             . /tmp/deploy_env.sh
+            # 远端 in-place upsert：保留运维手填的 POSTGRES_PASSWORD / OTP_PEPPER /
+            # SMTP_* / APP_BASE_URL 等敏感字段，仅删除并重写 HI_AGENT_IMAGE 与
+            # AUTH_SERVER_IMAGE 两行。绝不能用 `>` 覆盖整文件——会洗掉手填项，
+            # 导致下次 `docker compose up` 因 compose `:?` 必填校验直接失败。
             ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
-              "$CLEAN_USER@$CLEAN_HOST" \
-              "printf 'HI_AGENT_IMAGE=%s\nAUTH_SERVER_IMAGE=%s\n' '$RESOLVED_IMAGE' '$RESOLVED_AUTH_IMAGE' > $DEPLOY_PATH/.env && cat $DEPLOY_PATH/.env"
+              "$CLEAN_USER@$CLEAN_HOST" "
+                set -eu
+                touch $DEPLOY_PATH/.env
+                chmod 600 $DEPLOY_PATH/.env
+                sed -i.bak -E '/^(HI_AGENT_IMAGE|AUTH_SERVER_IMAGE)=/d' $DEPLOY_PATH/.env
+                printf 'HI_AGENT_IMAGE=%s\nAUTH_SERVER_IMAGE=%s\n' '$RESOLVED_IMAGE' '$RESOLVED_AUTH_IMAGE' >> $DEPLOY_PATH/.env
+                rm -f $DEPLOY_PATH/.env.bak
+                echo '--- /opt/hi-agent/.env 中 IMAGE 行 ---'
+                grep -E '^(HI_AGENT_IMAGE|AUTH_SERVER_IMAGE)=' $DEPLOY_PATH/.env
+              "
         - name: deploy
           script: |
             set -eu
