@@ -67,3 +67,9 @@ export async function checkVerifyAbuse(email: string): Promise<boolean> {
   });
   return failed >= 20;
 }
+
+const emailVerifyCounter = new LruCounter({ max: 4096 });
+
+export function emailVerifyHit(email: string): number {
+  return emailVerifyCounter.hit(`email:${email}`, 60_000);
+}

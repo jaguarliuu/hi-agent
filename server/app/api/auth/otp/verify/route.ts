@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { jsonError } from '@/lib/errors';
 import { hashOtp, getPepper } from '@/lib/otp';
-import { checkVerifyAbuse, ipHit } from '@/lib/rate-limit';
+import { checkVerifyAbuse, emailVerifyHit, ipHit } from '@/lib/rate-limit';
 import {
   createSession,
   buildSetCookie,
@@ -40,8 +40,12 @@ export async function POST(req: NextRequest) {
       where: { email, purpose: 'login', consumedAt: null, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'desc' }
     });
-    if (!otp) return jsonError('INVALID_OR_EXPIRED');
-    if (otp.attempts >= 5) return jsonError('INVALID_OR_EXPIRED');
+    if (!otp || otp.attempts >= 5) {
+      if (emailVerifyHit(email) > 20) {
+        return jsonError('RATE_LIMITED', { retryAfterSec: 1800 });
+      }
+      return jsonError('INVALID_OR_EXPIRED');
+    }
     const expectedHash = hashOtp(code, getPepper());
     const a = Buffer.from(expectedHash, 'hex');
     const b = Buffer.from(otp.codeHash, 'hex');
