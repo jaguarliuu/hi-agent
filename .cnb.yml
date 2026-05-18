@@ -70,6 +70,24 @@ main:
             set -eu
             docker push "$IMAGE_REPO:$CNB_COMMIT"
             docker push "$IMAGE_REPO:latest"
+        - name: docker build (auth-server)
+          script: |
+            set -eu
+            # 镜像名规则：在原 hi-agent 镜像名上拼 -auth 后缀，方便人工排查。
+            AUTH_REPO="$IMAGE_REPO-auth"
+            echo "AUTH_REPO=$AUTH_REPO" >> /tmp/auth_image.env
+            docker build \
+              --pull \
+              -f server/Dockerfile \
+              -t "$AUTH_REPO:$CNB_COMMIT" \
+              -t "$AUTH_REPO:latest" \
+              ./server
+        - name: docker push (auth-server)
+          script: |
+            set -eu
+            . /tmp/auth_image.env
+            docker push "$AUTH_REPO:$CNB_COMMIT"
+            docker push "$AUTH_REPO:latest"
 
         # -----------------------------------------------------------------
         # Stage 3：部署到目标服务器
@@ -170,13 +188,41 @@ main:
               echo "WARN: failed to resolve digest, fallback to tag reference"
               printf 'export RESOLVED_IMAGE=%s\n' "$IMAGE_REPO:$CHOSEN" >> /tmp/deploy_env.sh
             fi
+            # ---- auth-server 镜像同样的拉取 + digest 解析 ----
+            . /tmp/auth_image.env
+            CHOSEN_AUTH=""
+            for TAG in "$CNB_COMMIT" latest; do
+              for i in 1 2 3 4 5; do
+                echo "[try #$i] ssh remote pull $AUTH_REPO:$TAG"
+                if ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
+                     "$CLEAN_USER@$CLEAN_HOST" \
+                     "docker pull $AUTH_REPO:$TAG"
+                then
+                  CHOSEN_AUTH="$TAG"
+                  break 2
+                fi
+                sleep $((i * 3))
+              done
+            done
+            if [ -z "$CHOSEN_AUTH" ]; then
+              echo "ERROR: could not pull any auth tag" >&2; exit 1
+            fi
+            AUTH_DIGEST="$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
+              "$CLEAN_USER@$CLEAN_HOST" \
+              "docker image inspect --format '{{index .RepoDigests 0}}' $AUTH_REPO:$CHOSEN_AUTH" \
+              2>/dev/null || true)"
+            if [ -n "$AUTH_DIGEST" ]; then
+              printf 'export RESOLVED_AUTH_IMAGE=%s\n' "$AUTH_DIGEST" >> /tmp/deploy_env.sh
+            else
+              printf 'export RESOLVED_AUTH_IMAGE=%s\n' "$AUTH_REPO:$CHOSEN_AUTH" >> /tmp/deploy_env.sh
+            fi
         - name: write env file
           script: |
             set -eu
             . /tmp/deploy_env.sh
             ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
               "$CLEAN_USER@$CLEAN_HOST" \
-              "printf 'HI_AGENT_IMAGE=%s\n' '$RESOLVED_IMAGE' > $DEPLOY_PATH/.env && cat $DEPLOY_PATH/.env"
+              "printf 'HI_AGENT_IMAGE=%s\nAUTH_SERVER_IMAGE=%s\n' '$RESOLVED_IMAGE' '$RESOLVED_AUTH_IMAGE' > $DEPLOY_PATH/.env && cat $DEPLOY_PATH/.env"
         - name: deploy
           script: |
             set -eu
