@@ -76,12 +76,16 @@ main:
             # 镜像名规则：在原 hi-agent 镜像名上拼 -auth 后缀，方便人工排查。
             AUTH_REPO="$IMAGE_REPO-auth"
             echo "AUTH_REPO=$AUTH_REPO" >> /tmp/auth_image.env
+            # 注意：build context 必须是仓库根（`.`），不是 `./server`，
+            # 因为 server/Dockerfile 里所有 COPY 都写的 `COPY server/xxx ...`
+            # 形式（相对仓库根）。若 context 缩到 ./server，Docker 会去找
+            # ./server/server/... 而失败。
             docker build \
               --pull \
               -f server/Dockerfile \
               -t "$AUTH_REPO:$CNB_COMMIT" \
               -t "$AUTH_REPO:latest" \
-              ./server
+              .
         - name: docker push (auth-server)
           script: |
             set -eu

@@ -54,4 +54,18 @@ fi
 echo "$SCRIPT_BODY" | grep -qE "sed.*HI_AGENT_IMAGE\|AUTH_SERVER_IMAGE" \
   || { echo "FAIL: write env file 必须用 sed 删除既有 HI_AGENT_IMAGE/AUTH_SERVER_IMAGE 行（保留其它字段）" >&2; exit 1; }
 
+# 5. auth-server build context 必须是仓库根（`.`），不能是 `./server`
+#    server/Dockerfile 里所有 COPY 都写的是 `COPY server/xxx ...`（相对仓库根）；
+#    若把 context 缩到 ./server，docker 会去 ./server/server/... 找文件而失败。
+AUTH_BUILD_BODY=$(awk -v s="$AUTH_BUILD" '
+  NR==s { flag=1; print; next }
+  flag && /^[[:space:]]*-[[:space:]]+name:/ { exit }
+  flag { print }
+' "$F")
+if echo "$AUTH_BUILD_BODY" | sed -E 's/#.*$//' | grep -qE '^\s*\./server\s*$'; then
+  echo "FAIL: 'docker build (auth-server)' 的 build context 是 ./server，必须改为 ." >&2
+  echo "      原因：server/Dockerfile 里 COPY 都是 'COPY server/xxx' 相对仓库根的形式" >&2
+  exit 1
+fi
+
 echo "OK"
