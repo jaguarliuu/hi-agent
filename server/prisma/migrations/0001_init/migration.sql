@@ -1,5 +1,4 @@
 -- 启用 citext 扩展，使邮箱/用户名可大小写不敏感
-CREATE EXTENSION IF NOT EXISTS citext;
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
