@@ -1,0 +1,143 @@
+generator client {
+  provider        = "prisma-client-js"
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
+  previewFeatures = ["postgresqlExtensions"]
+}
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [citext]
+}
+enum UserStatus {
+  pending
+  active
+  disabled
+  deleted
+}
+enum UserRole {
+  user
+  editor
+  admin
+  superadmin
+}
+enum UserPlan {
+  free
+  pro
+  team
+}
+enum Gender {
+  unknown
+  male
+  female
+  other
+}
+enum OAuthProvider {
+  wechat
+  github
+  google
+}
+enum OtpPurpose {
+  login
+  bind_email
+  reset_password
+}
+
+model User {
+  id                  String      @id @default(uuid()) @db.Uuid
+  email               String      @unique @db.Citext
+  emailVerifiedAt     DateTime?   @map("email_verified_at")
+  passwordHash        String?     @map("password_hash")
+  passwordUpdatedAt   DateTime?   @map("password_updated_at")
+  status              UserStatus  @default(active)
+  role                UserRole    @default(user)
+  plan                UserPlan    @default(free)
+  planExpiresAt       DateTime?   @map("plan_expires_at")
+  referrerUserId      String?     @map("referrer_user_id") @db.Uuid
+  referralCode        String?     @unique @map("referral_code")
+  lastLoginAt         DateTime?   @map("last_login_at")
+  lastLoginIp         String?     @map("last_login_ip") @db.Inet
+  lastLoginUa         String?     @map("last_login_ua")
+  loginCount          Int         @default(0) @map("login_count")
+  failedLoginCount    Int         @default(0) @db.SmallInt @map("failed_login_count")
+  lockedUntil         DateTime?   @map("locked_until")
+  flags               Json        @default("{}")
+  createdAt           DateTime    @default(now()) @map("created_at")
+  updatedAt           DateTime    @updatedAt @map("updated_at")
+  deletedAt           DateTime?   @map("deleted_at")
+  profile             UserProfile?
+  oauthAccounts       OAuthAccount[]
+  sessions            Session[]
+  referrer            User?       @relation("UserReferrer", fields: [referrerUserId], references: [id])
+  referees            User[]      @relation("UserReferrer")
+  @@index([status])
+  @@map("users")
+}
+model UserProfile {
+  userId             String    @id @map("user_id") @db.Uuid
+  displayName        String?   @map("display_name")
+  username           String?   @unique @db.Citext
+  avatarUrl          String?   @map("avatar_url")
+  bio                String?
+  gender             Gender    @default(unknown)
+  birthday           DateTime? @db.Date
+  location           String?
+  occupation         String?
+  learningGoal       String?   @map("learning_goal")
+  websiteUrl         String?   @map("website_url")
+  socialLinks        Json      @default("{}") @map("social_links")
+  locale             String    @default("zh-CN")
+  timezone           String    @default("Asia/Shanghai")
+  notificationPrefs  Json      @default("{}") @map("notification_prefs")
+  customFields       Json      @default("{}") @map("custom_fields")
+  metadata           Json      @default("{}")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("user_profiles")
+}
+model OAuthAccount {
+  id                  String        @id @default(uuid()) @db.Uuid
+  userId              String        @map("user_id") @db.Uuid
+  provider            OAuthProvider
+  providerAccountId   String        @map("provider_account_id")
+  providerUsername    String?       @map("provider_username")
+  accessTokenEnc      Bytes?        @map("access_token_enc")
+  refreshTokenEnc     Bytes?        @map("refresh_token_enc")
+  tokenExpiresAt      DateTime?     @map("token_expires_at")
+  scope               String?
+  rawProfile          Json?         @map("raw_profile")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+model EmailOtp {
+  id          String     @id @default(uuid()) @db.Uuid
+  email       String     @db.Citext
+  codeHash    String     @map("code_hash")
+  purpose     OtpPurpose
+  expiresAt   DateTime   @map("expires_at")
+  consumedAt  DateTime?  @map("consumed_at")
+  attempts    Int        @default(0) @db.SmallInt
+  requestIp   String?    @map("request_ip") @db.Inet
+  createdAt   DateTime   @default(now()) @map("created_at")
+  @@index([email, purpose, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("email_otps")
+}
+model Session {
+  id          String     @id
+  userId      String     @map("user_id") @db.Uuid
+  expiresAt   DateTime   @map("expires_at")
+  lastSeenAt  DateTime   @map("last_seen_at")
+  ip          String?    @db.Inet
+  userAgent   String?    @map("user_agent")
+  revokedAt   DateTime?  @map("revoked_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("sessions")
+}
