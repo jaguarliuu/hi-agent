@@ -73,9 +73,19 @@ main:
         - name: docker build (auth-server)
           script: |
             set -eu
-            # 镜像名规则：在原 hi-agent 镜像名上拼 -auth 后缀，方便人工排查。
-            AUTH_REPO="$IMAGE_REPO-auth"
-            echo "AUTH_REPO=$AUTH_REPO" >> /tmp/auth_image.env
+            # 镜像命名策略：CNB registry 的 namespace 与 git repo 严格 1:1 绑定，
+            # 拼后缀（如 $IMAGE_REPO-auth）会落到一个 CNB 上不存在的 namespace
+            # 导致 push 时 403 Forbidden。因此 auth-server 与 hi-agent 共用同一
+            # repo，仅在 tag 上加 `auth-` 前缀以区分。下游消费方（compose
+            # AUTH_SERVER_IMAGE）只关心最终的不可变 RepoDigest，看不到 tag 形态，
+            # 不受影响。
+            AUTH_TAG_SHA="auth-$CNB_COMMIT"
+            AUTH_TAG_LATEST="auth-latest"
+            {
+              echo "AUTH_REPO=$IMAGE_REPO"
+              echo "AUTH_TAG_SHA=$AUTH_TAG_SHA"
+              echo "AUTH_TAG_LATEST=$AUTH_TAG_LATEST"
+            } >> /tmp/auth_image.env
             # 注意：build context 必须是仓库根（`.`），不是 `./server`，
             # 因为 server/Dockerfile 里所有 COPY 都写的 `COPY server/xxx ...`
             # 形式（相对仓库根）。若 context 缩到 ./server，Docker 会去找
@@ -83,15 +93,15 @@ main:
             docker build \
               --pull \
               -f server/Dockerfile \
-              -t "$AUTH_REPO:$CNB_COMMIT" \
-              -t "$AUTH_REPO:latest" \
+              -t "$IMAGE_REPO:$AUTH_TAG_SHA" \
+              -t "$IMAGE_REPO:$AUTH_TAG_LATEST" \
               .
         - name: docker push (auth-server)
           script: |
             set -eu
             . /tmp/auth_image.env
-            docker push "$AUTH_REPO:$CNB_COMMIT"
-            docker push "$AUTH_REPO:latest"
+            docker push "$AUTH_REPO:$AUTH_TAG_SHA"
+            docker push "$AUTH_REPO:$AUTH_TAG_LATEST"
 
         # -----------------------------------------------------------------
         # Stage 3：部署到目标服务器
@@ -193,9 +203,10 @@ main:
               printf 'export RESOLVED_IMAGE=%s\n' "$IMAGE_REPO:$CHOSEN" >> /tmp/deploy_env.sh
             fi
             # ---- auth-server 镜像同样的拉取 + digest 解析 ----
+            # auth-server 与 hi-agent 共享 $IMAGE_REPO，只是 tag 带 `auth-` 前缀。
             . /tmp/auth_image.env
             CHOSEN_AUTH=""
-            for TAG in "$CNB_COMMIT" latest; do
+            for TAG in "$AUTH_TAG_SHA" "$AUTH_TAG_LATEST"; do
               for i in 1 2 3 4 5; do
                 echo "[try #$i] ssh remote pull $AUTH_REPO:$TAG"
                 if ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
@@ -209,7 +220,7 @@ main:
               done
             done
             if [ -z "$CHOSEN_AUTH" ]; then
-              echo "ERROR: could not pull any auth tag" >&2; exit 1
+              echo "ERROR: could not pull any auth tag ($AUTH_TAG_SHA / $AUTH_TAG_LATEST) from $AUTH_REPO" >&2; exit 1
             fi
             AUTH_DIGEST="$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 \
               "$CLEAN_USER@$CLEAN_HOST" \

@@ -68,4 +68,13 @@ if echo "$AUTH_BUILD_BODY" | sed -E 's/#.*$//' | grep -qE '^\s*\./server\s*$'; t
   exit 1
 fi
 
+# 6. auth-server 镜像不能拼后缀（$IMAGE_REPO-auth），CNB registry 与 git repo
+#    1:1 绑定，新 namespace 没有 push 权限会 403 Forbidden。必须共享 $IMAGE_REPO
+#    用 `auth-` tag 前缀区分。
+if echo "$AUTH_BUILD_BODY" | sed -E 's/#.*$//' | grep -qE '\$IMAGE_REPO-auth\b|\$\{IMAGE_REPO\}-auth'; then
+  echo "FAIL: auth-server 镜像不能用 \$IMAGE_REPO-auth 后缀（CNB 会 403 Forbidden）" >&2
+  echo "      请改为同 repo + tag 前缀：\$IMAGE_REPO:auth-\$CNB_COMMIT" >&2
+  exit 1
+fi
+
 echo "OK"
