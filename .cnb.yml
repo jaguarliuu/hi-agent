@@ -233,7 +233,10 @@ main:
             fi
         - name: write env file
           script: |
-            set -euo pipefail
+            set -eu
+            # 注：CNB 的 node:20 runner 默认 /bin/sh = dash（POSIX 严格），
+            # 不支持 `set -o pipefail`。本 stage 没有管道命令，省略 pipefail
+            # 不影响错误捕获——任何子命令失败 set -e 仍会立即退出。
             . /tmp/deploy_env.sh
             # 远端 in-place upsert：保留运维手填的 POSTGRES_PASSWORD / OTP_PEPPER /
             # SMTP_* / APP_BASE_URL 等敏感字段，仅删除并重写 HI_AGENT_IMAGE 与

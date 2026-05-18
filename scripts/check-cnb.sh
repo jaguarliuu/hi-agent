@@ -77,4 +77,14 @@ if echo "$AUTH_BUILD_BODY" | sed -E 's/#.*$//' | grep -qE '\$IMAGE_REPO-auth\b|\
   exit 1
 fi
 
+# 7. CNB node:20 runner 的 /bin/sh = dash（POSIX 严格），不支持 `set -o pipefail`。
+#    任何 stage 在脚本顶层用 `set -euo pipefail` 都会以 'sh: Illegal option -o pipefail'
+#    立即 exit 2。这里把 `script: |` 块的 shell 语句剥出（去 `#...` 注释）后扫描。
+NON_COMMENT=$(sed -E 's/#.*$//' "$F")
+if echo "$NON_COMMENT" | grep -qE '^[[:space:]]*set[[:space:]]+-[a-zA-Z]*o[[:space:]]+pipefail|^[[:space:]]*set[[:space:]]+-o[[:space:]]+pipefail'; then
+  echo "FAIL: 检测到 'set -o pipefail' / 'set -euo pipefail'，CNB 的 dash shell 不支持" >&2
+  echo "      请改为 'set -eu'（其他 stage 一致）" >&2
+  exit 1
+fi
+
 echo "OK"
