@@ -70,6 +70,20 @@
 	@wasm path *.wasm
 	header @wasm Content-Type "application/wasm"
 
+	# --- API reverse proxy ------------------------------------------
+	# /api/* 走 auth-server (Next.js standalone, 监听 :3000)。
+	# 必须放在 try_files 之前，否则静态回退会把 /api/foo 当作不存在的
+	# 静态资源直接 rewrite 到 /404.html。
+	@api path /api/*
+	handle @api {
+		reverse_proxy auth-server:3000 {
+			header_up Host {host}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
 	# --- Static export routing --------------------------------------
 	# Next.js export with `trailingSlash: true` emits `out/<route>/index.html`.
 	# Resolve in this order:
