@@ -12,12 +12,26 @@
   width: min(420px, 92vw);
   max-height: calc(100vh - 32px);
   overflow: auto;
-  background: var(--nextra-bg, #fff);
-  color: var(--nextra-fg, #111);
+  background: #fff;
+  color: #111;
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
   box-sizing: border-box;
+}
+@media (prefers-color-scheme: dark) {
+  .dialog {
+    background: #1f1f1f;
+    color: #f5f5f5;
+  }
+  .field input {
+    background: #2a2a2a;
+    color: inherit;
+    border-color: #3a3a3a;
+  }
+  .hint {
+    color: #a3a3a3;
+  }
 }
 .title {
   font-size: 18px;
