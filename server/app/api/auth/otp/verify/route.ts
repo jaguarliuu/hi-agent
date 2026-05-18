@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { jsonError } from '@/lib/errors';
@@ -41,7 +42,10 @@ export async function POST(req: NextRequest) {
   if (!otp) return jsonError('INVALID_OR_EXPIRED');
   if (otp.attempts >= 5) return jsonError('INVALID_OR_EXPIRED');
   const expectedHash = hashOtp(code, getPepper());
-  if (expectedHash !== otp.codeHash) {
+  const a = Buffer.from(expectedHash, 'hex');
+  const b = Buffer.from(otp.codeHash, 'hex');
+  const equal = a.length === b.length && timingSafeEqual(a, b);
+  if (!equal) {
     await prisma.emailOtp.update({
       where: { id: otp.id },
       data: { attempts: { increment: 1 } }
