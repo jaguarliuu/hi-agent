@@ -6,6 +6,7 @@ import { getAuthedUser } from '@/lib/auth-context';
 import {
   profilePatchSchema,
   mergeCustomFields,
+  asCustomFieldsRecord,
   type ProfilePatch
 } from '@/lib/profile';
 
@@ -60,11 +61,8 @@ export async function PATCH(req: NextRequest) {
       where: { userId: auth.user.id }
     });
 
-    const existingCf =
-      existing && existing.customFields && typeof existing.customFields === 'object'
-        ? (existing.customFields as Record<string, unknown>)
-        : {};
-    const mergedCf = mergeCustomFields(existingCf, patch.custom_fields);
+    const existingCfRecord = asCustomFieldsRecord(existing?.customFields);
+    const mergedCf = mergeCustomFields(existingCfRecord, patch.custom_fields);
     const mergedCfJson = mergedCf as Prisma.InputJsonValue;
 
     return tx.userProfile.upsert({

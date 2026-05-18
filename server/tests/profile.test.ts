@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { profilePatchSchema, mergeCustomFields } from '@/lib/profile';
+import {
+  profilePatchSchema,
+  mergeCustomFields,
+  asCustomFieldsRecord
+} from '@/lib/profile';
 
 describe('profilePatchSchema', () => {
   it('accepts a fully valid patch', () => {
@@ -66,5 +70,20 @@ describe('mergeCustomFields', () => {
     const existing = { a: 1, b: 2 };
     const merged = mergeCustomFields(existing, undefined);
     expect(merged).toEqual({ a: 1, b: 2 });
+  });
+});
+
+describe('asCustomFieldsRecord', () => {
+  it('passes through plain object', () => {
+    expect(asCustomFieldsRecord({ a: 1 })).toEqual({ a: 1 });
+  });
+  it('returns null for array', () => {
+    expect(asCustomFieldsRecord([1, 2])).toBeNull();
+  });
+  it('returns null for null/undefined/string/number', () => {
+    expect(asCustomFieldsRecord(null)).toBeNull();
+    expect(asCustomFieldsRecord(undefined)).toBeNull();
+    expect(asCustomFieldsRecord('x')).toBeNull();
+    expect(asCustomFieldsRecord(42)).toBeNull();
   });
 });

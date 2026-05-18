@@ -49,3 +49,12 @@ export function mergeCustomFields(
   }
   return base;
 }
+
+export function asCustomFieldsRecord(
+  v: unknown
+): Record<string, unknown> | null {
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    return v as Record<string, unknown>;
+  }
+  return null;
+}
