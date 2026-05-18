@@ -151,6 +151,8 @@ npm run test:e2e      # Playwright E2E
 
 ## 部署
 
+> 自 2026-05 起站点统一通过 CNB 流水线（[.cnb.yml](./.cnb.yml)）构建并部署到自托管 Caddy 容器；GitHub Pages 部署已废弃，旧的 `*.github.io/hi-agent` 路径不再维护。
+
 ### 推荐：Docker + Caddy（生产，Labs 完整可用）
 
 由于 WebContainer 强制要求 `crossOriginIsolated`（需服务端下发 `COOP/COEP` 头），生产部署使用多阶段镜像 —— Node 20 构建静态产物，Caddy 2 负责托管并注入安全头。
