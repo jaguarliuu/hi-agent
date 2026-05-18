@@ -35,24 +35,36 @@ if (( api_line >= try_line )); then
   exit 1
 fi
 
-# 5) 尝试 caddy validate（可选）
-if command -v docker >/dev/null 2>&1; then
-  if docker image inspect caddy:2-alpine >/dev/null 2>&1 \
-     || docker pull caddy:2-alpine >/dev/null 2>&1; then
-    if docker run --rm -v "$(pwd)/docker/Caddyfile:/etc/caddy/Caddyfile:ro" \
-         caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile \
-         >/tmp/caddy-validate.out 2>&1; then
-      echo "caddy validate: OK"
-    else
-      echo "FAIL: caddy validate reported errors:"
-      cat /tmp/caddy-validate.out
-      exit 1
-    fi
-  else
-    echo "SKIP: caddy image unavailable"
+# 5) 尝试 caddy validate（CI/strict 模式必须执行；本地 dev 在 docker 不可用时允许 SKIP）
+STRICT="${CADDY_VALIDATE_STRICT:-${CI:-0}}"
+strict_fail_or_skip() {
+  local reason="$1"
+  if [[ "$STRICT" =~ ^(1|true|yes)$ ]]; then
+    echo "FAIL: caddy validate required but $reason (CADDY_VALIDATE_STRICT or CI is set)"
+    exit 1
   fi
+  echo "SKIP: $reason"
+  exit 0
+}
+
+if ! command -v docker >/dev/null 2>&1; then
+  strict_fail_or_skip "docker not available"
+fi
+if ! docker info >/dev/null 2>&1; then
+  strict_fail_or_skip "docker daemon unavailable"
+fi
+if ! docker image inspect caddy:2-alpine >/dev/null 2>&1 \
+   && ! docker pull caddy:2-alpine >/dev/null 2>&1; then
+  strict_fail_or_skip "caddy:2-alpine image unavailable"
+fi
+if docker run --rm -v "$(pwd)/docker/Caddyfile:/etc/caddy/Caddyfile:ro" \
+     caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile \
+     >/tmp/caddy-validate.out 2>&1; then
+  echo "caddy validate: OK"
 else
-  echo "SKIP: docker not available, only grep-mode checks ran"
+  echo "FAIL: caddy validate reported errors:"
+  cat /tmp/caddy-validate.out
+  exit 1
 fi
 
 echo "OK"
