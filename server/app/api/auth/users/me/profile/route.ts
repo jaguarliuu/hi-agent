@@ -52,45 +52,47 @@ export async function PATCH(req: NextRequest) {
   }
   const patch: ProfilePatch = parsed.data;
 
-  const existing = await prisma.userProfile.findUnique({
-    where: { userId: auth.user.id }
-  });
-
-  const existingCf =
-    existing && existing.customFields && typeof existing.customFields === 'object'
-      ? (existing.customFields as Record<string, unknown>)
-      : {};
-  const mergedCf = mergeCustomFields(existingCf, patch.custom_fields);
-  const mergedCfJson = mergedCf as Prisma.InputJsonValue;
-
   const birthdayDate =
     patch.birthday !== undefined ? new Date(patch.birthday) : undefined;
 
-  const saved = await prisma.userProfile.upsert({
-    where: { userId: auth.user.id },
-    update: {
-      ...(patch.display_name !== undefined
-        ? { displayName: patch.display_name }
-        : {}),
-      ...(patch.avatar_url !== undefined ? { avatarUrl: patch.avatar_url } : {}),
-      ...(patch.gender !== undefined ? { gender: patch.gender } : {}),
-      ...(birthdayDate !== undefined ? { birthday: birthdayDate } : {}),
-      ...(patch.bio !== undefined ? { bio: patch.bio } : {}),
-      ...(patch.locale !== undefined ? { locale: patch.locale } : {}),
-      ...(patch.timezone !== undefined ? { timezone: patch.timezone } : {}),
-      customFields: mergedCfJson
-    },
-    create: {
-      userId: auth.user.id,
-      displayName: patch.display_name ?? null,
-      avatarUrl: patch.avatar_url ?? null,
-      gender: patch.gender ?? 'unknown',
-      birthday: birthdayDate ?? null,
-      bio: patch.bio ?? null,
-      ...(patch.locale !== undefined ? { locale: patch.locale } : {}),
-      ...(patch.timezone !== undefined ? { timezone: patch.timezone } : {}),
-      customFields: mergedCfJson
-    }
+  const saved = await prisma.$transaction(async (tx) => {
+    const existing = await tx.userProfile.findUnique({
+      where: { userId: auth.user.id }
+    });
+
+    const existingCf =
+      existing && existing.customFields && typeof existing.customFields === 'object'
+        ? (existing.customFields as Record<string, unknown>)
+        : {};
+    const mergedCf = mergeCustomFields(existingCf, patch.custom_fields);
+    const mergedCfJson = mergedCf as Prisma.InputJsonValue;
+
+    return tx.userProfile.upsert({
+      where: { userId: auth.user.id },
+      update: {
+        ...(patch.display_name !== undefined
+          ? { displayName: patch.display_name }
+          : {}),
+        ...(patch.avatar_url !== undefined ? { avatarUrl: patch.avatar_url } : {}),
+        ...(patch.gender !== undefined ? { gender: patch.gender } : {}),
+        ...(birthdayDate !== undefined ? { birthday: birthdayDate } : {}),
+        ...(patch.bio !== undefined ? { bio: patch.bio } : {}),
+        ...(patch.locale !== undefined ? { locale: patch.locale } : {}),
+        ...(patch.timezone !== undefined ? { timezone: patch.timezone } : {}),
+        customFields: mergedCfJson
+      },
+      create: {
+        userId: auth.user.id,
+        displayName: patch.display_name ?? null,
+        avatarUrl: patch.avatar_url ?? null,
+        gender: patch.gender ?? 'unknown',
+        birthday: birthdayDate ?? null,
+        bio: patch.bio ?? null,
+        ...(patch.locale !== undefined ? { locale: patch.locale } : {}),
+        ...(patch.timezone !== undefined ? { timezone: patch.timezone } : {}),
+        customFields: mergedCfJson
+      }
+    });
   });
 
   return jsonOk({ profile: toApiProfile(saved) });
