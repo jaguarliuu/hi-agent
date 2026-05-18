@@ -26,7 +26,9 @@ export async function getAuthedUser(req: NextRequest): Promise<{
 }
 
 export function getClientIp(req: NextRequest): string | null {
+  const trust = process.env.TRUST_PROXY;
+  if (trust !== 'true' && trust !== '1') return null;
   const xff = req.headers.get('x-forwarded-for');
-  if (xff) return xff.split(',')[0]!.trim();
+  if (xff) return xff.split(',')[0]?.trim() ?? null;
   return req.headers.get('x-real-ip');
 }
