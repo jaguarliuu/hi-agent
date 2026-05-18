@@ -1,15 +1,43 @@
 services:
+  postgres:
+    image: docker.cnb.cool/jaguarliu.cool/wenyuan-ai/docker-sync/postgres:16-alpine_amd64
+    container_name: hi-agent-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB must be set}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      TZ: Asia/Shanghai
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks: [hi-agent-net]
+    ports:
+      - "127.0.0.1:55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
   hi-agent:
-    # HI_AGENT_IMAGE 必须在同目录 .env 中由部署流水线写入。
-    # 使用 `${VAR:?msg}` 而不是 `${VAR:-default}`，避免 .env 缺失或写入
-    # 失败时 compose 静默回退到固定 :latest，造成「容器永远不更新」。
     image: ${HI_AGENT_IMAGE:?HI_AGENT_IMAGE must be set in .env (deploy pipeline writes it)}
     container_name: hi-agent
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:80"
+    networks: [hi-agent-net]
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
       interval: 30s
       timeout: 5s
       retries: 3
+
+networks:
+  hi-agent-net:
+    name: hi-agent-net
+    driver: bridge
+
+volumes:
+  pg-data:
+    name: hi-agent-pg-data
