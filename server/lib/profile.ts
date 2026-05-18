@@ -19,7 +19,7 @@ export const profilePatchSchema = z
       .string()
       .regex(BIRTHDAY_RE, 'birthday must be YYYY-MM-DD')
       .optional(),
-    bio: z.string().max(512).optional(),
+    bio: z.string().max(500).optional(),
     locale: z.string().min(2).max(16).optional(),
     timezone: z.string().min(1).max(64).optional(),
     custom_fields: customFieldsSchema.optional()
