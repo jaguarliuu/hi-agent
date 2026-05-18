@@ -1,0 +1,8 @@
+node_modules
+.next
+.next-cache
+.env
+.env.*
+*.log
+tests
+**/*.test.ts
