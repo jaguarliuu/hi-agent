@@ -1,5 +1,6 @@
 'use client'
 import React, { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { requestOtp, verifyOtp, AuthError, type VerifyOtpResponse } from './auth-client'
 import styles from './login-dialog.module.css'
 
@@ -17,9 +18,14 @@ export function LoginDialog({ open, onClose, onLoggedIn }: LoginDialogProps) {
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
   const titleId = useId()
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const dialogRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!open) {
@@ -47,7 +53,7 @@ export function LoginDialog({ open, onClose, onLoggedIn }: LoginDialogProps) {
     return () => document.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
   const messageFor = (e: AuthError): string => {
     switch (e.code) {
@@ -100,7 +106,7 @@ export function LoginDialog({ open, onClose, onLoggedIn }: LoginDialogProps) {
     if (e.target === e.currentTarget) onClose()
   }
 
-  return (
+  return createPortal(
     <div className={styles.backdrop} onMouseDown={onBackdropMouseDown}>
       <div
         ref={dialogRef}
@@ -178,6 +184,7 @@ export function LoginDialog({ open, onClose, onLoggedIn }: LoginDialogProps) {
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
