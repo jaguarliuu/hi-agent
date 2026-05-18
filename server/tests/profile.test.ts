@@ -21,6 +21,24 @@ describe('profilePatchSchema', () => {
     expect(r.success).toBe(false);
   });
 
+  it('rejects invalid calendar date like 2025-02-31', () => {
+    expect(() =>
+      profilePatchSchema.parse({ birthday: '2025-02-31' })
+    ).toThrow();
+  });
+
+  it('rejects out-of-range month/day like 2025-13-45', () => {
+    expect(() =>
+      profilePatchSchema.parse({ birthday: '2025-13-45' })
+    ).toThrow();
+  });
+
+  it('accepts valid date 1995-06-15', () => {
+    expect(
+      profilePatchSchema.parse({ birthday: '1995-06-15' }).birthday
+    ).toBe('1995-06-15');
+  });
+
   it('rejects gender outside enum', () => {
     const r = profilePatchSchema.safeParse({ gender: 'UNKNOWN' });
     expect(r.success).toBe(false);

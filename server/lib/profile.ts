@@ -18,6 +18,12 @@ export const profilePatchSchema = z
     birthday: z
       .string()
       .regex(BIRTHDAY_RE, 'birthday must be YYYY-MM-DD')
+      .refine(
+        (v) =>
+          Number.isFinite(new Date(v).getTime()) &&
+          v === new Date(v).toISOString().slice(0, 10),
+        { message: 'birthday must be a valid calendar date' }
+      )
       .optional(),
     bio: z.string().max(500).optional(),
     locale: z.string().min(2).max(16).optional(),
