@@ -23,6 +23,10 @@ for h in 'X-Real-IP' 'X-Forwarded-For' 'X-Forwarded-Proto'; do
     || { echo "FAIL: missing header_up ${h}"; exit 1; }
 done
 
+# 3.1) X-Forwarded-For 必须使用覆盖语义（不允许 += 追加，否则 Caddy 上游伪造的 XFF 会被原样保留）
+grep -qE 'header_up\s+X-Forwarded-For\s+\{remote_host\}\s*$' "$CADDYFILE" \
+  || { echo "FAIL: X-Forwarded-For must use overwrite (not +=) semantic"; exit 1; }
+
 # 4) @api 段必须出现在 try_files 之前
 api_line=$(grep -nE '^\s*@api\s+path\s+/api/\*' "$CADDYFILE" | head -n1 | cut -d: -f1)
 try_line=$(grep -nE '^\s*try_files\s+' "$CADDYFILE" | head -n1 | cut -d: -f1)

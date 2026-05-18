@@ -76,6 +76,13 @@
 	# 静态资源直接 rewrite 到 /404.html。
 	@api path /api/*
 	handle @api {
+		# 安全约束：
+		# - X-Forwarded-For/X-Real-IP 用 = 覆盖（不带 +=），意味着 Caddy 上游伪造的 XFF
+		#   会被强制重写为真实 remote_host。这要求 Caddy 必须是面向客户端的最外层网关；
+		#   若未来需要在 Caddy 之外再加一层 HTTPS/CDN 反代，应改为 += 追加并由 auth-server
+		#   配置 trust proxy hop 数。
+		# - X-Forwarded-Proto 透传上游 header（外层未写入时为空），让 auth-server 端
+		#   根据 SECURE_COOKIE/TRUST_PROXY 自行决策；与生产部署链一致。
 		reverse_proxy auth-server:3000 {
 			header_up Host {host}
 			header_up X-Real-IP {remote_host}
