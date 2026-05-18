@@ -34,86 +34,93 @@ export async function POST(req: NextRequest) {
   const parsed = Body.safeParse(body);
   if (!parsed.success) return jsonError('INVALID_INPUT');
   const { email, code } = parsed.data;
-  if (await checkVerifyAbuse(email)) return jsonError('RATE_LIMITED', { retryAfterSec: 1800 });
-  const otp = await prisma.emailOtp.findFirst({
-    where: { email, purpose: 'login', consumedAt: null, expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: 'desc' }
-  });
-  if (!otp) return jsonError('INVALID_OR_EXPIRED');
-  if (otp.attempts >= 5) return jsonError('INVALID_OR_EXPIRED');
-  const expectedHash = hashOtp(code, getPepper());
-  const a = Buffer.from(expectedHash, 'hex');
-  const b = Buffer.from(otp.codeHash, 'hex');
-  const equal = a.length === b.length && timingSafeEqual(a, b);
-  if (!equal) {
-    await prisma.emailOtp.update({
-      where: { id: otp.id },
-      data: { attempts: { increment: 1 } }
+  try {
+    if (await checkVerifyAbuse(email)) return jsonError('RATE_LIMITED', { retryAfterSec: 1800 });
+    const otp = await prisma.emailOtp.findFirst({
+      where: { email, purpose: 'login', consumedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' }
     });
-    return jsonError('INVALID_OR_EXPIRED');
-  }
-  const userAgent = req.headers.get('user-agent');
-  const user = await prisma
-    .$transaction(async (tx) => {
-      await tx.emailOtp.update({
+    if (!otp) return jsonError('INVALID_OR_EXPIRED');
+    if (otp.attempts >= 5) return jsonError('INVALID_OR_EXPIRED');
+    const expectedHash = hashOtp(code, getPepper());
+    const a = Buffer.from(expectedHash, 'hex');
+    const b = Buffer.from(otp.codeHash, 'hex');
+    const equal = a.length === b.length && timingSafeEqual(a, b);
+    if (!equal) {
+      await prisma.emailOtp.update({
         where: { id: otp.id },
-        data: { consumedAt: new Date() }
+        data: { attempts: { increment: 1 } }
       });
-      const existing = await tx.user.findUnique({ where: { email } });
-      if (existing) {
-        if (existing.status === 'disabled') {
-          throw Object.assign(new Error('disabled'), { code: 'ACCOUNT_DISABLED' });
+      return jsonError('INVALID_OR_EXPIRED');
+    }
+    const userAgent = req.headers.get('user-agent');
+    const user = await prisma
+      .$transaction(async (tx) => {
+        await tx.emailOtp.update({
+          where: { id: otp.id },
+          data: { consumedAt: new Date() }
+        });
+        const existing = await tx.user.findUnique({ where: { email } });
+        if (existing) {
+          if (existing.status === 'disabled') {
+            throw Object.assign(new Error('disabled'), { code: 'ACCOUNT_DISABLED' });
+          }
+          return tx.user.update({
+            where: { id: existing.id },
+            data: {
+              emailVerifiedAt: existing.emailVerifiedAt ?? new Date(),
+              lastLoginAt: new Date(),
+              lastLoginIp: ip === 'unknown' ? null : ip,
+              lastLoginUa: userAgent ?? null,
+              loginCount: { increment: 1 },
+              failedLoginCount: 0
+            }
+          });
         }
-        return tx.user.update({
-          where: { id: existing.id },
+        const created = await tx.user.create({
           data: {
-            emailVerifiedAt: existing.emailVerifiedAt ?? new Date(),
+            email,
+            status: 'active',
+            emailVerifiedAt: new Date(),
             lastLoginAt: new Date(),
             lastLoginIp: ip === 'unknown' ? null : ip,
             lastLoginUa: userAgent ?? null,
-            loginCount: { increment: 1 },
-            failedLoginCount: 0
+            loginCount: 1
           }
         });
-      }
-      const created = await tx.user.create({
-        data: {
-          email,
-          status: 'active',
-          emailVerifiedAt: new Date(),
-          lastLoginAt: new Date(),
-          lastLoginIp: ip === 'unknown' ? null : ip,
-          lastLoginUa: userAgent ?? null,
-          loginCount: 1
-        }
+        await tx.userProfile.create({
+          data: {
+            userId: created.id,
+            displayName: email.split('@')[0]!.slice(0, 32)
+          }
+        });
+        return created;
+      })
+      .catch((err: { code?: string }) => {
+        if (err?.code === 'ACCOUNT_DISABLED') return null;
+        if (err?.code === 'P2002') return 'P2002' as const;
+        throw err;
       });
-      await tx.userProfile.create({
-        data: {
-          userId: created.id,
-          displayName: email.split('@')[0]!.slice(0, 32)
-        }
-      });
-      return created;
-    })
-    .catch((err: { code?: string }) => {
-      if (err?.code === 'ACCOUNT_DISABLED') return null;
-      throw err;
+    if (user === null) return jsonError('ACCOUNT_DISABLED');
+    if (user === 'P2002') return jsonError('INVALID_OR_EXPIRED');
+    const { id: sid } = await createSession({
+      userId: user.id,
+      ip: ip === 'unknown' ? null : ip,
+      userAgent
     });
-  if (!user) return jsonError('ACCOUNT_DISABLED');
-  const { id: sid } = await createSession({
-    userId: user.id,
-    ip: ip === 'unknown' ? null : ip,
-    userAgent
-  });
-  const cookie = buildSetCookie(sid, {
-    secure: isSecureCookie(),
-    ttlSeconds: getSessionTtlSeconds()
-  });
-  return new NextResponse(
-    JSON.stringify({ ok: true, user: { id: user.id, email: user.email } }),
-    {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Set-Cookie': cookie }
-    }
-  );
+    const cookie = buildSetCookie(sid, {
+      secure: isSecureCookie(),
+      ttlSeconds: getSessionTtlSeconds()
+    });
+    return new NextResponse(
+      JSON.stringify({ ok: true, user: { id: user.id, email: user.email } }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Set-Cookie': cookie }
+      }
+    );
+  } catch (err) {
+    console.error('[otp/verify] internal error', String(err));
+    return jsonError('INTERNAL');
+  }
 }
