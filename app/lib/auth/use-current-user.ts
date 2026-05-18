@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchMe, type MeProfile, type MeUser } from './auth-client'
 
 export interface UseCurrentUserResult {
@@ -15,20 +15,36 @@ export function useCurrentUser(): UseCurrentUserResult {
   const [profile, setProfile] = useState<MeProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const mountedRef = useRef(true)
+  const reqIdRef = useRef(0)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   const refresh = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+    const myId = ++reqIdRef.current
+    if (mountedRef.current) {
+      setLoading(true)
+      setError(null)
+    }
     try {
       const me = await fetchMe()
+      if (!mountedRef.current || myId !== reqIdRef.current) return
       setUser(me?.user ?? null)
       setProfile(me?.user?.profile ?? null)
     } catch (e) {
+      if (!mountedRef.current || myId !== reqIdRef.current) return
       setError(e as Error)
       setUser(null)
       setProfile(null)
     } finally {
-      setLoading(false)
+      if (mountedRef.current && myId === reqIdRef.current) {
+        setLoading(false)
+      }
     }
   }, [])
 

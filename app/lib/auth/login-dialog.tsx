@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, type FormEvent } from 'react'
+import React, { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { requestOtp, verifyOtp, AuthError, type VerifyOtpResponse } from './auth-client'
 import styles from './login-dialog.module.css'
 
@@ -17,13 +17,43 @@ export function LoginDialog({ open, onClose, onLoggedIn }: LoginDialogProps) {
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const titleId = useId()
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+  const dialogRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!open) {
+      setStep('email')
+      setEmail('')
+      setCode('')
+      setError(null)
+      setBusy(false)
+      const prev = previouslyFocusedRef.current
+      previouslyFocusedRef.current = null
+      if (prev && typeof prev.focus === 'function') {
+        prev.focus()
+      }
+      return
+    }
+    previouslyFocusedRef.current =
+      typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        onClose()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open, onClose])
 
   if (!open) return null
 
   const messageFor = (e: AuthError): string => {
     switch (e.code) {
       case 'RATE_LIMITED': {
-        const sec = (e.detail.retryAfterSec as number | undefined) ?? 60
+        const raw = e.detail.retryAfterSec
+        const sec = typeof raw === 'number' && Number.isFinite(raw) ? raw : 60
         return `请求过于频繁，请稍后再试（约 ${sec} 秒后）`
       }
       case 'INVALID_INPUT':
@@ -66,10 +96,22 @@ export function LoginDialog({ open, onClose, onLoggedIn }: LoginDialogProps) {
     }
   }
 
+  function onBackdropMouseDown(e: React.MouseEvent<HTMLDivElement>) {
+    if (e.target === e.currentTarget) onClose()
+  }
+
   return (
-    <div className={styles.backdrop} role="dialog" aria-modal>
-      <div className={styles.dialog}>
-        <h2 className={styles.title}>登录 / 注册</h2>
+    <div className={styles.backdrop} onMouseDown={onBackdropMouseDown}>
+      <div
+        ref={dialogRef}
+        className={styles.dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <h2 id={titleId} className={styles.title}>
+          登录 / 注册
+        </h2>
         {step === 'email' ? (
           <form onSubmit={onSendCode}>
             <label className={styles.field}>
