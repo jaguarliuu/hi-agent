@@ -5,28 +5,10 @@ set -euo pipefail
 COMPOSE=deploy/docker-compose.yml
 
 # 用一个临时的 .env 给所有必填变量提供占位值，绕过 ${VAR:?...} 校验。
-# 仅用于解析 compose 结构，不会真的起容器。
+# 仅用于解析 compose 结构，不会真的起容器。fixture 内容抽到 deploy/test/fixture.env。
 TMP_ENV=$(mktemp)
 trap 'rm -f "$TMP_ENV" /tmp/compose.out' EXIT
-cat >"$TMP_ENV" <<'EOF'
-HI_AGENT_IMAGE=hi-agent:test
-AUTH_SERVER_IMAGE=hi-agent-auth-server:test
-POSTGRES_DB=hi_agent
-POSTGRES_USER=hi_agent
-POSTGRES_PASSWORD=testpwd
-DATABASE_URL=postgresql://hi_agent:testpwd@postgres:5432/hi_agent?schema=public
-OTP_PEPPER=testpepper
-SESSION_TTL_DAYS=30
-SECURE_COOKIE=true
-TRUST_PROXY=true
-SMTP_HOST=smtp.example.com
-SMTP_PORT=465
-SMTP_SECURE=true
-SMTP_USER=user
-SMTP_PASS=pass
-SMTP_FROM=noreply@example.com
-APP_BASE_URL=https://hi-agent.local
-EOF
+cp deploy/test/fixture.env "$TMP_ENV"
 
 # 1) compose config 不报错
 docker compose -f "$COMPOSE" --env-file "$TMP_ENV" config >/tmp/compose.out
