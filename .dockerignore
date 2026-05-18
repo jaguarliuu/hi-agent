@@ -5,6 +5,8 @@ build
 dist
 
 .git
+.git/**
+.gitignore
 .github
 .worktrees
 .superpowers
@@ -16,11 +18,17 @@ test-results
 
 docs
 scripts/*.md
+*.md
+
+coverage
+.vscode
+.idea
 
 .DS_Store
 *.log
 .env*.local
 *.tsbuildinfo
+.next/cache
 
 Dockerfile
 .dockerignore
