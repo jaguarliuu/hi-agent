@@ -173,6 +173,40 @@ docker run --rm -p 8080:80 hi-agent-docs:latest
 - [`Dockerfile`](./Dockerfile)
 - [`docker/Caddyfile`](./docker/Caddyfile)（设置 `Cross-Origin-Embedder-Policy: require-corp` / `Cross-Origin-Opener-Policy: same-origin` / `Cross-Origin-Resource-Policy: cross-origin`）
 
+### 首次部署：auth-server 与 postgres
+
+1. 在服务器准备目录与持久化卷（按你部署机器实际路径）：
+
+   ```bash
+   sudo mkdir -p /opt/hi-agent
+   ```
+
+2. 拷贝并填写环境变量：
+
+   ```bash
+   scp deploy/.env.example user@server:/opt/hi-agent/.env
+   ssh user@server "chmod 600 /opt/hi-agent/.env && vim /opt/hi-agent/.env"
+   ```
+
+   必填项：
+   - `POSTGRES_PASSWORD`：随机 32+ 字节强密码
+   - `OTP_PEPPER`：`openssl rand -base64 32`
+   - `DATABASE_URL`：`postgresql://hi_agent:<上面密码>@postgres:5432/hi_agent?schema=public`
+   - `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM`：你的发信账号
+   - `SESSION_COOKIE_SECURE=true`（生产环境必开）
+
+   `HI_AGENT_IMAGE` 与 `AUTH_SERVER_IMAGE` 由 CNB 流水线在每次部署时写入，**手工不要填**。
+
+3. 触发 CNB 流水线（push 到 main），构建结束后流水线会：
+   - 在服务器上写入 `/opt/hi-agent/.env`（追加 IMAGE 变量）
+   - `docker compose pull && up -d --force-recreate`
+
+4. 烟测：
+
+   ```bash
+   curl -fsS https://你的域名/api/health
+   ```
+
 ## 设计文档
 
 项目内部的设计与实施记录位于 [`docs/superpowers/`](./docs/superpowers/)，包括：
