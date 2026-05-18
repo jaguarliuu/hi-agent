@@ -24,6 +24,9 @@ services:
     image: ${HI_AGENT_IMAGE:?HI_AGENT_IMAGE must be set in .env (deploy pipeline writes it)}
     container_name: hi-agent
     restart: unless-stopped
+    depends_on:
+      auth-server:
+        condition: service_started
     ports:
       - "127.0.0.1:8080:80"
     networks: [hi-agent-net]
@@ -32,6 +35,36 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+  auth-server:
+    image: ${AUTH_SERVER_IMAGE:?AUTH_SERVER_IMAGE must be set in .env (deploy pipeline writes it)}
+    container_name: hi-agent-auth-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
+      OTP_PEPPER: ${OTP_PEPPER:?OTP_PEPPER must be set}
+      SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-30}
+      SECURE_COOKIE: ${SECURE_COOKIE:-true}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST must be set}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:?SMTP_USER must be set}
+      SMTP_PASS: ${SMTP_PASS:?SMTP_PASS must be set}
+      SMTP_FROM: ${SMTP_FROM:-noreply@example.com}
+      APP_BASE_URL: ${APP_BASE_URL:?APP_BASE_URL must be set}
+      TZ: Asia/Shanghai
+    networks: [hi-agent-net]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 networks:
   hi-agent-net:
