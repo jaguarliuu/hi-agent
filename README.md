@@ -173,14 +173,6 @@ docker run --rm -p 8080:80 hi-agent-docs:latest
 - [`Dockerfile`](./Dockerfile)
 - [`docker/Caddyfile`](./docker/Caddyfile)（设置 `Cross-Origin-Embedder-Policy: require-corp` / `Cross-Origin-Opener-Policy: same-origin` / `Cross-Origin-Resource-Policy: cross-origin`）
 
-### 备选：GitHub Pages（仅文档阅读，Labs 不可用）
-
-仓库保留了 [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml)，向 `main` 推送后会自动构建并发布到 GitHub Pages。访问地址：https://jaguarliuu.github.io/hi-agent
-
-> 受 GitHub Pages 不支持自定义响应头限制，部署到 Pages 的版本**无法运行 WebContainer**。Labs 章节会进入降级提示。建议使用上面的 Docker 方案获得完整体验。
-
-构建期通过 `GITHUB_PAGES=true` 启用 `/hi-agent` basePath（见 `next.config.mjs:6`），因此同一份代码可同时面向两种部署目标。
-
 ## 设计文档
 
 项目内部的设计与实施记录位于 [`docs/superpowers/`](./docs/superpowers/)，包括：
