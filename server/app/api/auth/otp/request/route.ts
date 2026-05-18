@@ -26,8 +26,8 @@ export async function POST(req: NextRequest) {
   const parsed = Body.safeParse(body);
   if (!parsed.success) return jsonError('INVALID_INPUT');
   const email = parsed.data.email;
-  const reason = await checkEmailOtpQuota(email);
-  if (reason) return jsonError('RATE_LIMITED', { retryAfterSec: 60 });
+  const quota = await checkEmailOtpQuota(email);
+  if (quota) return jsonError('RATE_LIMITED', { retryAfterSec: quota.retryAfterSec });
   const code = generateOtpCode();
   const codeHash = hashOtp(code, getPepper());
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);

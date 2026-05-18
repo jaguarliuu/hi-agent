@@ -33,7 +33,7 @@ export function ipHit(ip: string): number {
   return ipCounter.hit(`ip:${ip}`, 60_000);
 }
 
-export async function checkEmailOtpQuota(email: string): Promise<string | null> {
+export async function checkEmailOtpQuota(email: string): Promise<{ retryAfterSec: number } | null> {
   const now = new Date();
   const oneMinAgo = new Date(now.getTime() - 60_000);
   const oneHourAgo = new Date(now.getTime() - 3_600_000);
@@ -49,9 +49,9 @@ export async function checkEmailOtpQuota(email: string): Promise<string | null> 
       where: { email, purpose: 'login', createdAt: { gte: oneDayAgo } }
     })
   ]);
-  if (last60s >= 1) return '60 秒内只能发送一次';
-  if (lastHour >= 5) return '1 小时内已达上限';
-  if (lastDay >= 10) return '24 小时内已达上限';
+  if (last60s >= 1) return { retryAfterSec: 60 };
+  if (lastHour >= 5) return { retryAfterSec: 3600 };
+  if (lastDay >= 10) return { retryAfterSec: 86400 };
   return null;
 }
 
