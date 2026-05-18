@@ -24,9 +24,6 @@ services:
     image: ${HI_AGENT_IMAGE:?HI_AGENT_IMAGE must be set in .env (deploy pipeline writes it)}
     container_name: hi-agent
     restart: unless-stopped
-    depends_on:
-      auth-server:
-        condition: service_started
     ports:
       - "127.0.0.1:8080:80"
     networks: [hi-agent-net]

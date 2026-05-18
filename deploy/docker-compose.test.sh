@@ -102,4 +102,34 @@ assert not re.search(rf'^\s{{{indent+2}}}ports:\s*$', btxt, re.MULTILINE), \
 print('no-publish check: OK')
 PY
 
+# 6) hi-agent 不应依赖 auth-server（静态站需独立可服务，auth 故障时仅 /api/* 502）
+python3 - <<'PY'
+import re
+text = open('/tmp/compose.out').read()
+lines = text.splitlines()
+start = None
+indent = None
+for i, ln in enumerate(lines):
+    if re.match(r'^(\s+)hi-agent:\s*$', ln):
+        start = i
+        indent = len(re.match(r'^(\s+)', ln).group(1))
+        break
+assert start is not None, 'hi-agent section not found'
+block = []
+for ln in lines[start+1:]:
+    if ln.strip() == '':
+        block.append(ln)
+        continue
+    cur_indent = len(ln) - len(ln.lstrip(' '))
+    if cur_indent <= indent:
+        break
+    block.append(ln)
+btxt = '\n'.join(block)
+m2 = re.search(r'depends_on:\s*\n((?:\s+.*\n)+?)(?=\s{0,' + str(indent+2) + r'}\S|\Z)', btxt)
+if m2:
+    assert 'auth-server' not in m2.group(1), \
+        f'hi-agent must NOT depend_on auth-server (Caddy reverse_proxy is lazy):\n{m2.group(1)}'
+print('hi-agent independence check: OK')
+PY
+
 echo "OK"
