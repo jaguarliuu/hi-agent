@@ -4,11 +4,17 @@ let cached: ReturnType<typeof nodemailer.createTransport> | null = null;
 
 function getTransport() {
   if (cached) return cached;
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!host) throw new Error('SMTP_HOST is not set');
+  if (!user) throw new Error('SMTP_USER is not set');
+  if (!pass) throw new Error('SMTP_PASS is not set');
   cached = nodemailer.createTransport({
-    host: process.env.SMTP_HOST!,
+    host,
     port: Number(process.env.SMTP_PORT || '465'),
     secure: process.env.SMTP_SECURE !== 'false',
-    auth: { user: process.env.SMTP_USER!, pass: process.env.SMTP_PASS! }
+    auth: { user, pass }
   });
   return cached;
 }
