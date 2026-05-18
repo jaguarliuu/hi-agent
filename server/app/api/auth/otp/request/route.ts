@@ -41,7 +41,8 @@ export async function POST(req: NextRequest) {
     }
   });
   sendOtpEmail(email, code).catch((err) => {
-    console.error('[mailer] send failed', { email, err: String(err) });
+    const domain = email.split('@')[1] ?? 'unknown';
+    console.error('[mailer] send failed', { domain, err: String(err) });
   });
   return jsonOk({});
 }
