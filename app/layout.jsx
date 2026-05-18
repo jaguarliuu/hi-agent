@@ -13,6 +13,7 @@ import { HeaderAutohide } from './lib/header-autohide'
 import { CommentsBoundary } from './lib/comments/comments-boundary'
 import { RegisterSW } from './lib/pwa/register-sw'
 import { InstallPrompt } from './lib/pwa/install-prompt'
+import { UserMenu } from './lib/auth/user-menu'
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
@@ -76,7 +77,9 @@ const navbar = (
       </span>
     }
     projectLink="https://github.com/jaguarliuu/hi-agent"
-  />
+  >
+    <UserMenu />
+  </Navbar>
 )
 
 const footer = (
